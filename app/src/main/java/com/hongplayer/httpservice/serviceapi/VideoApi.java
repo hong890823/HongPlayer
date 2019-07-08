@@ -1,6 +1,7 @@
 package com.hongplayer.httpservice.serviceapi;
 
 
+import com.hongplayer.bean.apiopen.VideoResult;
 import com.hongplayer.httpservice.service.HttpMethod;
 import com.hongplayer.httpservice.service.VideoBaseApi;
 
@@ -12,11 +13,13 @@ import io.reactivex.Observer;
  */
 public class VideoApi extends VideoBaseApi {
 
-    public static final String BASE_URL = "https://api.apiopen.top/";
+    private static final String API_OPEN_BASE_URL = "https://api.apiopen.top/";
+    private static final String IDATA_API_BASE_URL = "https://api01.idataapi.cn:8000/";
+
     public static VideoApi videoApi;
     public VideoService videoService;
     public VideoApi() {
-        videoService = HttpMethod.getInstance(BASE_URL).createApi(VideoService.class);
+        videoService = HttpMethod.getInstance(API_OPEN_BASE_URL).createApi(VideoService.class);
     }
 
     public static VideoApi getInstance() {
@@ -27,10 +30,10 @@ public class VideoApi extends VideoBaseApi {
     }
     /*-------------------------------------获取的方法-------------------------------------*/
 
-    public void getVideoList(Observer<VideoRootBean> subscriber)
+    public void getVideoList(Observer<VideoResult> subscriber)
     {
         Observable observable = videoService.getVideoList()
-                .map(new HttpResultFunc<VideoRootBean>());
+                .map(new HttpResultFunc<VideoResult>());
 
         toSubscribe(observable, subscriber);
     }

@@ -2,6 +2,8 @@ package com.hongplayer.httpservice.service;
 
 import com.hongplayer.httpservice.httpentity.VideoHttpResult;
 
+import java.util.List;
+
 import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -24,15 +26,15 @@ public class VideoBaseApi {
      * @param <T>   Subscriber真正需要的数据类型，也就是Data部分的数据类型
      *           Func1(I,O) 输入和输出
      */
-    public class HttpResultFunc<T> implements Function<VideoHttpResult<T>, T> {
+    public class HttpResultFunc<T> implements Function<VideoHttpResult<T>, List<T>> {
 
         @Override
-        public T apply(VideoHttpResult<T> videoHttpResult) {
-            if (videoHttpResult.getErrno() == 0) {
-                return videoHttpResult.getData();
+        public List<T> apply(VideoHttpResult<T> videoHttpResult) {
+            if (videoHttpResult.getCode() == 200) {
+                return videoHttpResult.getResult();
             }
-            throw new ExceptionApi(videoHttpResult.getErrno(), videoHttpResult.getErrmsg());
+            throw new ExceptionApi(videoHttpResult.getCode(), videoHttpResult.getMessage());
         }
     }
 
-}//laji
+}

@@ -1,10 +1,12 @@
 package com.hongplayer.httpservice.httpentity;
 
+import java.util.List;
+
 public class VideoHttpResult<T> {
 
     private int code;
     private String message;
-    private T result;
+    private List<T> result;
 
     public int getCode() {
         return code;
@@ -22,11 +24,11 @@ public class VideoHttpResult<T> {
         this.message = message;
     }
 
-    public T getResult() {
+    public List<T> getResult() {
         return result;
     }
 
-    public void setResult(T result) {
+    public void setResult(List<T> result) {
         this.result = result;
     }
 }
