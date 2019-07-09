@@ -1,5 +1,6 @@
 package com.hongplayer.httpservice.service;
 
+import com.hongplayer.httpservice.httpentity.BiliHttpResult;
 import com.hongplayer.httpservice.httpentity.VideoHttpResult;
 
 import java.util.List;
@@ -34,6 +35,13 @@ public class VideoBaseApi {
                 return videoHttpResult.getResult();
             }
             throw new ExceptionApi(videoHttpResult.getCode(), videoHttpResult.getMessage());
+        }
+    }
+
+    public class BiliResultFunc<T> implements Function<BiliHttpResult<T>,List<T>>{
+        @Override
+        public List<T> apply(BiliHttpResult<T> biliHttpResult) {
+            return biliHttpResult.getData();
         }
     }
 

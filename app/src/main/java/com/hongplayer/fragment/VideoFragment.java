@@ -15,6 +15,8 @@ import com.hongplayer.activity.VideoLiveActivity;
 import com.hongplayer.adapter.VideoListAdapter;
 import com.hongplayer.adapter.WapHeaderAndFooterAdapter;
 import com.hongplayer.base.BaseFragment;
+import com.hongplayer.bean.idataapi.BiliLiveData;
+import com.hongplayer.httpservice.httpentity.BiliHttpResult;
 import com.hongplayer.httpservice.serviceapi.VideoApi;
 import com.hongplayer.log.MyLog;
 import com.hongplayer.subscriber.HttpSubscriber;
@@ -36,10 +38,9 @@ public class VideoFragment extends BaseFragment{
 
     private VideoListAdapter videoListAdapter;
     private WapHeaderAndFooterAdapter headerAndFooterAdapter;
-    private List<PandaTvListItemBean> datas;
+    private List<BiliLiveData> datas;
 
     private int currentPage = 1;
-    private int pageSize = 20;
     private boolean isLoad = true;
     private boolean isOver = false;
 
@@ -84,9 +85,12 @@ public class VideoFragment extends BaseFragment{
 
         videoListAdapter.setOnItemClickListener(new VideoListAdapter.OnItemClickListener() {
             @Override
-            public void onItemClick(PandaTvListItemBean pandaTvListItemBean) {
+            public void onItemClick(BiliLiveData biliLiveData) {
                 showLoadDialog("加载中");
-                getLiveUrl(pandaTvListItemBean.getId(), "3.3.1.5978");
+                Bundle bundle = new Bundle();
+                bundle.putString("url", biliLiveData.getVideoUrls().get(0));
+                VideoLiveActivity.startActivity(getActivity(), VideoLiveActivity.class, bundle);
+                hideLoadDialog();
             }
         });
 
@@ -106,14 +110,14 @@ public class VideoFragment extends BaseFragment{
     }
 
     private void getVideoList() {
-        VideoApi.getInstance().getVideList("lol", currentPage, pageSize, 1, "3.3.1.5978", new HttpSubscriber<PandaTvDataBean>(new SubscriberOnListener<PandaTvDataBean>() {
+        VideoApi.getInstance().getLolLiveList(new HttpSubscriber<BiliHttpResult>(new SubscriberOnListener<BiliHttpResult>() {
             @Override
-            public void onSucceed(PandaTvDataBean data) {
+            public void onSucceed(BiliHttpResult result) {
                 if(currentPage == 1) {
                     datas.clear();
                 }
 
-                if(data.getItems().size() < pageSize) {
+                if(result.getData().size() == 0) {
                     loadMsgTv.setText("没有更多了");
                     isOver = true;
                 } else {
@@ -121,7 +125,7 @@ public class VideoFragment extends BaseFragment{
                     isOver = false;
                     currentPage++;
                 }
-                datas.addAll(data.getItems());
+                datas.addAll(result.getData());
                 headerAndFooterAdapter.notifyDataSetChanged();
                 isLoad = false;
                 swipeRefreshLayout.setRefreshing(false);
@@ -133,36 +137,7 @@ public class VideoFragment extends BaseFragment{
                 isLoad = false;
                 swipeRefreshLayout.setRefreshing(false);
             }
-        }, getActivity()));
+        },getActivity()),currentPage);
     }
-
-    /**
-     * 单击获取某个条目的视频源地址
-     * */
-    private void getLiveUrl(String roomId, String version) {
-        VideoApi.getInstance().getLiveUrl(roomId, version, new HttpSubscriber<PandaTvLiveDataBean>(new SubscriberOnListener<PandaTvLiveDataBean>() {
-            @Override
-            public void onSucceed(PandaTvLiveDataBean data) {
-                String[] pl = data.getInfo().getVideoinfo().getPlflag().split("_");
-
-                if(pl != null && pl.length > 0)
-                {
-                    String url = "http://pl" + pl[pl.length - 1] + ".live.panda.tv/live_panda/" + data.getInfo().getVideoinfo().getRoom_key() + "_mid.flv?sign=" + data.getInfo().getVideoinfo().getSign() + "&time=" + data.getInfo().getVideoinfo().getTs();
-                    MyLog.d(url);
-                    Bundle bundle = new Bundle();
-                    bundle.putString("url", url);
-                    VideoLiveActivity.startActivity(getActivity(), VideoLiveActivity.class, bundle);
-                }
-                hideLoadDialog();
-            }
-
-            @Override
-            public void onError(int code, String msg) {
-                hideLoadDialog();
-                showToast(msg);
-            }
-        }, getActivity()));
-    }
-
 
 }

@@ -11,6 +11,7 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.hongplayer.R;
+import com.hongplayer.bean.idataapi.BiliLiveData;
 
 import java.util.List;
 
@@ -21,10 +22,10 @@ import butterknife.ButterKnife;
 public class VideoListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>{
 
     private Context context;
-    private List<PandaTvListItemBean> datas;
+    private List<BiliLiveData> datas;
     private OnItemClickListener onItemClickListener;
 
-    public VideoListAdapter(Context context, List<PandaTvListItemBean> datas) {
+    public VideoListAdapter(Context context, List<BiliLiveData> datas) {
         this.context = context;
         this.datas = datas;
     }
@@ -62,13 +63,14 @@ public class VideoListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             }
         }
 
-        myHolder.tvName.setText(datas.get(position).getName());
-        Glide.with(context).load(datas.get(position).getPictures().getImg()).into(myHolder.ivBg);
+        final BiliLiveData biliLiveData = datas.get(position);
+        myHolder.tvName.setText(biliLiveData.getTitle());
+        Glide.with(context).load(biliLiveData.getCoverUrl()).into(myHolder.ivBg);
         myHolder.rlItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(onItemClickListener != null) {
-                    onItemClickListener.onItemClick(datas.get(position));
+                    onItemClickListener.onItemClick(biliLiveData);
                 }
             }
         });
@@ -101,7 +103,7 @@ public class VideoListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     }
 
     public interface OnItemClickListener {
-        void onItemClick(PandaTvListItemBean pandaTvListItemBean);
+        void onItemClick(BiliLiveData biliLiveData);
     }
 
 }
