@@ -13,6 +13,9 @@ class HVideo :public HBaseAV{
 public:
     HStatus *status;
     HCallJava *callJava;
+    int rate;
+
+    bool frameRateBig = false;
 
 public:
     HVideo(HStatus *status,HCallJava *callJava);

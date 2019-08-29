@@ -13,7 +13,10 @@ HCallJava::HCallJava(JavaVM *vm,JNIEnv *env,jobject obj) {
     jclass jcl = jniEnv->GetObjectClass(jobj);
 
     jmid_calledOnPrepared = jniEnv->GetMethodID(jcl,"calledOnPrepared","()V");
-    jmid_calledOnError = jniEnv->GetMethodID(jcl,"calledOnError","(Ljava/lang/String;)V");
+    jmid_calledOnError = jniEnv->GetMethodID(jcl,"calledOnError","(ILjava/lang/String;)V");
+    jmid_onlySoft = jniEnv->GetMethodID(jcl, "isOnlySoft", "()Z");
+    jmid_onlyMusic = jniEnv->GetMethodID(jcl,"isOnlyMusic","()Z");
+    jmid_init_mdeiaCodec = jniEnv->GetMethodID(jcl,"initMediaCodec","(III[B[B)V");
 }
 
 HCallJava::~HCallJava() {
@@ -31,7 +34,7 @@ void HCallJava::onPrepared(int type) {
     }
 }
 
-void HCallJava::onError(int type, char *errorMsg_) {
+void HCallJava::onError(int type, int errorCode,char *errorMsg_) {
     if(H_THREAD_MAIN==type){
         jstring errorMsg = jniEnv->NewStringUTF(errorMsg_);
         jniEnv->CallVoidMethod(jobj,jmid_calledOnPrepared,errorMsg);
@@ -41,6 +44,48 @@ void HCallJava::onError(int type, char *errorMsg_) {
         jstring errorMsg = env->NewStringUTF(errorMsg_);
         env->CallVoidMethod(jobj,jmid_calledOnPrepared,errorMsg);
         javaVM->DetachCurrentThread();
+    }
+}
+
+bool HCallJava::isOnlySoft(int type) {
+    bool soft = false;
+    if(H_THREAD_CHILD==type){
+        JNIEnv *jniEnv;
+        if(javaVM->AttachCurrentThread(&jniEnv,0)!=JNI_OK){
+
+        }
+        soft = jniEnv->CallBooleanMethod(jobj,jmid_onlySoft);
+        javaVM->DetachCurrentThread();
+    }else{
+        soft = jniEnv->CallBooleanMethod(jobj,jmid_onlySoft);
+    }
+    return soft;
+}
+
+/**
+ * 硬解初始化，注意要把申请的byte数组的内存空间进行及时的释放
+ * */
+void HCallJava::onInitMediaCodec(int type, int mimeType, int width, int height, int csd_0_size,
+                                 int csd_1_size, uint8_t *csd_0, uint8_t *csd_1) {
+    if(H_THREAD_CHILD==type){
+        JNIEnv *jniEnv;
+        javaVM->AttachCurrentThread(&jniEnv,0);
+        jbyteArray csd0 = jniEnv->NewByteArray(csd_0_size);
+        jniEnv->SetByteArrayRegion(csd0, 0, csd_0_size, reinterpret_cast<const jbyte *>(csd0));
+        jbyteArray csd1 = jniEnv->NewByteArray(csd_1_size);
+        jniEnv->SetByteArrayRegion(csd1, 0, csd_1_size, reinterpret_cast<const jbyte *>(csd1));
+        jniEnv->CallVoidMethod(jobj,jmid_init_mdeiaCodec,mimeType,width,height,csd0,csd1);
+        jniEnv->DeleteLocalRef(csd0);
+        jniEnv->DeleteLocalRef(csd1);
+        javaVM->DetachCurrentThread();
+    }else{
+        jbyteArray csd0 = jniEnv->NewByteArray(csd_0_size);
+        jniEnv->SetByteArrayRegion(csd0, 0, csd_0_size, reinterpret_cast<const jbyte *>(csd0));
+        jbyteArray csd1 = jniEnv->NewByteArray(csd_1_size);
+        jniEnv->SetByteArrayRegion(csd1, 0, csd_1_size, reinterpret_cast<const jbyte *>(csd1));
+        jniEnv->CallVoidMethod(jobj,jmid_init_mdeiaCodec,mimeType,width,height,csd0,csd1);
+        jniEnv->DeleteLocalRef(csd0);
+        jniEnv->DeleteLocalRef(csd1);
     }
 }
 

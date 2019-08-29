@@ -13,6 +13,9 @@ extern "C"
 class HBaseAV {
 public:
     AVCodecContext *avCodecContext = NULL;
+    int streamIndex;
+    AVRational time_base;
+    int duration;
 };
 
 

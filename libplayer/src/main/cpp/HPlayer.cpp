@@ -3,7 +3,7 @@
 #include "HCallJava.h"
 
 JavaVM *javaVM = NULL;
-HFFmpeg *hfFmpeg = NULL;
+HFFmpeg *hFFmpeg = NULL;
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -12,8 +12,8 @@ Java_com_hong_libplayer_player_HPlayer_native_1prepare(JNIEnv *env, jobject inst
     jboolean *isCopy = JNI_FALSE;
     const char *url = env->GetStringUTFChars(url_,isCopy);
     HCallJava *callJava = new HCallJava(javaVM, env, instance);
-    hfFmpeg = new HFFmpeg(callJava,url);
-    hfFmpeg->prepareFFmpeg();
+    hFFmpeg = new HFFmpeg(callJava,url);
+    hFFmpeg->prepareFFmpeg();
 }
 
 extern "C"
@@ -31,5 +31,5 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm,void *reserved){
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_hong_libplayer_player_HPlayer_native_1start(JNIEnv *env, jobject instance) {
-    hfFmpeg->startPlay();
+    hFFmpeg->startPlay();
 }

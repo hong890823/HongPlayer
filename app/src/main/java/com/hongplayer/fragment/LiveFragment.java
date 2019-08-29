@@ -10,17 +10,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 
-import com.bumptech.glide.Glide;
 import com.hongplayer.R;
 import com.hongplayer.activity.VideoLiveActivity;
+import com.hongplayer.adapter.LiveListAdapter;
 import com.hongplayer.adapter.VideoListAdapter;
 import com.hongplayer.adapter.WapHeaderAndFooterAdapter;
 import com.hongplayer.base.BaseFragment;
-import com.hongplayer.bean.apiopen.VideoContent;
-import com.hongplayer.bean.apiopen.VideoContentData;
-import com.hongplayer.bean.apiopen.VideoCover;
-import com.hongplayer.bean.apiopen.VideoData;
-import com.hongplayer.bean.apiopen.VideoResult;
 import com.hongplayer.bean.idataapi.BiliLiveData;
 import com.hongplayer.httpservice.httpentity.BiliHttpResult;
 import com.hongplayer.httpservice.serviceapi.VideoApi;
@@ -34,9 +29,9 @@ import java.util.List;
 import butterknife.BindView;
 
 /**
- * 视频源来源：https://www.jianshu.com/p/e6f072839282
+ * 视频源来源：https://www.idataapi.cn/product/detail/428?cur_id=427&init_id=0
  * */
-public class VideoFragment extends BaseFragment{
+public class LiveFragment extends BaseFragment{
 
     @BindView(R.id.recycler_view)
     RecyclerView recyclerView;
@@ -45,9 +40,9 @@ public class VideoFragment extends BaseFragment{
 
     private TextView loadMsgTv;
 
-    private VideoListAdapter videoListAdapter;
+    private LiveListAdapter liveListAdapter;
     private WapHeaderAndFooterAdapter headerAndFooterAdapter;
-    private List<VideoResult> datas;
+    private List<BiliLiveData> datas;
 
     private int currentPage = 1;
     private boolean isLoad = true;
@@ -56,14 +51,14 @@ public class VideoFragment extends BaseFragment{
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.fragment_video);
+        setContentView(R.layout.fragment_live);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         initAdapter();
-        getVideoList();
+        getLiveList();
         swipeRefreshLayout.setColorSchemeColors(getResources().getColor(R.color.color_ec4c48));
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
@@ -71,7 +66,7 @@ public class VideoFragment extends BaseFragment{
                 if(!isLoad){
                     isLoad = true;
                     currentPage = 1;
-                    getVideoList();
+                    getLiveList();
                 }
             }
         });
@@ -79,8 +74,8 @@ public class VideoFragment extends BaseFragment{
 
     private void initAdapter() {
         datas = new ArrayList<>();
-        videoListAdapter = new VideoListAdapter(getActivity(), datas);
-        headerAndFooterAdapter = new WapHeaderAndFooterAdapter(videoListAdapter);
+        liveListAdapter = new LiveListAdapter(getActivity(), datas);
+        headerAndFooterAdapter = new WapHeaderAndFooterAdapter(liveListAdapter);
 
         GridLayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 2);
         gridLayoutManager.setOrientation(GridLayoutManager.VERTICAL);
@@ -92,14 +87,20 @@ public class VideoFragment extends BaseFragment{
 
         recyclerView.setAdapter(headerAndFooterAdapter);
 
-        videoListAdapter.setOnItemClickListener(new VideoListAdapter.OnItemClickListener() {
+        liveListAdapter.setOnItemClickListener(new LiveListAdapter.OnItemClickListener() {
             @Override
-            public void onItemClick(String playUrl) {
-                showLoadDialog("加载中");
-                Bundle bundle = new Bundle();
-                bundle.putString("url", playUrl);
-                VideoLiveActivity.startActivity(getActivity(), VideoLiveActivity.class, bundle);
-                hideLoadDialog();
+            public void onItemClick(BiliLiveData biliLiveData) {
+                List<String> videoUrls = biliLiveData.getVideoUrls();
+                if(videoUrls==null || videoUrls.size()==0){
+                    showLoadDialog("数据无效");
+                    hideLoadDialog();
+                }else{
+                    showLoadDialog("加载中");
+                    Bundle bundle = new Bundle();
+                    bundle.putString("url", biliLiveData.getVideoUrls().get(0));
+                    VideoLiveActivity.startActivity(getActivity(), VideoLiveActivity.class, bundle);
+                    hideLoadDialog();
+                }
             }
         });
 
@@ -112,20 +113,21 @@ public class VideoFragment extends BaseFragment{
                 }
                 if(!isLoad) {
                     isLoad = true;
-                    getVideoList();
+                    getLiveList();
                 }
             }
         });
     }
 
-    private void getVideoList() {
-        VideoApi.getInstance().getVideoList(new HttpSubscriber<List<VideoResult>>(new SubscriberOnListener<List<VideoResult>>() {
+    private void getLiveList() {
+        VideoApi.getInstance().getLolLiveList(new HttpSubscriber<BiliHttpResult>(new SubscriberOnListener<BiliHttpResult>() {
             @Override
-            public void onSucceed(List<VideoResult> data) {
+            public void onSucceed(BiliHttpResult result) {
                 if(currentPage == 1) {
                     datas.clear();
                 }
-                if(data==null || data.size() == 0) {
+                List<BiliLiveData> biliLiveDataList = result.getData();
+                if(biliLiveDataList==null || biliLiveDataList.size() == 0) {
                     loadMsgTv.setText("没有更多了");
                     isOver = true;
                 } else {
@@ -133,39 +135,38 @@ public class VideoFragment extends BaseFragment{
                     isOver = false;
                     currentPage++;
                 }
-                datas.addAll(selectVideoData(data));
+                datas.addAll(selectLiveData(biliLiveDataList));
                 headerAndFooterAdapter.notifyDataSetChanged();
                 isLoad = false;
                 swipeRefreshLayout.setRefreshing(false);
+
+                //鉴于这个接口坑人，我得找到有效的数据才行
+                if(datas.size()==0){
+                    currentPage++;
+                    getLiveList();
+                }
             }
 
             @Override
             public void onError(int code, String msg) {
-
+                MyLog.d(msg);
+                isLoad = false;
+                swipeRefreshLayout.setRefreshing(false);
             }
-        },getActivity()));
+        },getActivity()),currentPage);
     }
 
-    private List<VideoResult> selectVideoData(List<VideoResult> source){
-        List<VideoResult> videoResultList = new ArrayList<>();
+    private List<BiliLiveData> selectLiveData(List<BiliLiveData> source){
+        List<BiliLiveData> biliLiveDataList = new ArrayList<>();
         if(source!=null){
-            for(VideoResult videoResult:source){
-                VideoData videoData = videoResult.getData();
-                if(videoData!=null){
-                    VideoContent videoContent = videoData.getContent();
-                    if(videoContent!=null){
-                        VideoContentData videoContentData = videoContent.getData();
-                        if(videoContentData!=null){
-                            String playUrl = videoContentData.getPlayUrl();
-                            if(playUrl!=null){
-                                videoResultList.add(videoResult);
-                            }
-                        }
-                    }
+            for(BiliLiveData biliLiveData:source){
+                List<String> videoUrls = biliLiveData.getVideoUrls();
+                if(videoUrls!=null && videoUrls.size()>0){
+                    biliLiveDataList.add(biliLiveData);
                 }
             }
         }
-        return videoResultList;
+        return biliLiveDataList;
     }
 
 

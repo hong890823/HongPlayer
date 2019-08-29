@@ -1,5 +1,5 @@
 package com.hong.libplayer.listener;
 
 public interface HOnErrorListener {
-    void onError(String errorMsg);
+    void onError(int errorCode,String errorMsg);
 }

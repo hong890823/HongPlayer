@@ -21,6 +21,7 @@ import com.hongplayer.base.BaseActivity;
 import com.hongplayer.fragment.AboutFragment;
 import com.hongplayer.fragment.LocalFragment;
 import com.hongplayer.fragment.RadioFragment;
+import com.hongplayer.fragment.LiveFragment;
 import com.hongplayer.fragment.VideoFragment;
 import com.hongplayer.widget.TabLayoutView;
 
@@ -37,7 +38,9 @@ public class MainActivity extends BaseActivity {
     TabLayoutView tabLayoutView;
 
     private ViewPagerAdapter viewPagerAdapter;
+
     private VideoFragment videoFragment;
+    private LiveFragment liveFragment;
     private RadioFragment radioFragment;
     private LocalFragment localFragment;
     private AboutFragment aboutFragment;
@@ -78,11 +81,13 @@ public class MainActivity extends BaseActivity {
     private void initFragments() {
         fragmentPages = new ArrayList<>();
         videoFragment = new VideoFragment();
+        liveFragment = new LiveFragment();
         radioFragment = new RadioFragment();
         localFragment = new LocalFragment();
         aboutFragment = new AboutFragment();
 
         fragmentPages.add(videoFragment);
+        fragmentPages.add(liveFragment);
         fragmentPages.add(radioFragment);
         fragmentPages.add(localFragment);
         fragmentPages.add(aboutFragment);
@@ -103,13 +108,16 @@ public class MainActivity extends BaseActivity {
                 if(position == 0) {
                     setTitle("视频");
                 }
-                else if(position == 1) {
-                    setTitle("广播");
+                else if(position == 1){
+                    setTitle("直播");
                 }
                 else if(position == 2) {
-                    setTitle("本地");
+                    setTitle("广播");
                 }
                 else if(position == 3) {
+                    setTitle("本地");
+                }
+                else if(position == 4) {
                     setTitle("关于");
                 }
             }

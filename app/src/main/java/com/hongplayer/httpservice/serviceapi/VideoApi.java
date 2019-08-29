@@ -7,6 +7,8 @@ import com.hongplayer.httpservice.httpentity.BiliHttpResult;
 import com.hongplayer.httpservice.service.HttpMethod;
 import com.hongplayer.httpservice.service.VideoBaseApi;
 
+import java.util.List;
+
 import io.reactivex.Observable;
 import io.reactivex.Observer;
 
@@ -39,22 +41,21 @@ public class VideoApi extends VideoBaseApi {
     }
     /*-------------------------------------获取的方法-------------------------------------*/
 
-    public void getVideoList(Observer<VideoResult> subscriber){
-        Observable observable = videoService.getVideoList()
+    public void getVideoList(Observer<List<VideoResult>> subscriber){
+        Observable<List<VideoResult>> observable = videoService.getVideoList()
                 .map(new HttpResultFunc<VideoResult>());
-
         toSubscribe(observable, subscriber);
     }
 
     public void getLolLiveList(Observer<BiliHttpResult> subscriber, int pageToken){
-        Observable obserable = bilibiliService.getLiveList(IDATA_API_KEY,LOL,pageToken);
-        toSubscribe(obserable,subscriber);
+        Observable observable = bilibiliService.getLiveList(IDATA_API_KEY,LOL,pageToken);
+        toSubscribe(observable,subscriber);
 
     }
 
     public void getPubgLiveList(Observer<BiliHttpResult> subscriber,int pageToken){
-        Observable obserable = bilibiliService.getLiveList(IDATA_API_KEY,PUBG,pageToken);
-        toSubscribe(obserable,subscriber);
+        Observable observable = bilibiliService.getLiveList(IDATA_API_KEY,PUBG,pageToken);
+        toSubscribe(observable,subscriber);
     }
 
 }

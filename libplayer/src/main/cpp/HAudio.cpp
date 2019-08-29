@@ -6,6 +6,11 @@
 
 #include "HAudio.h"
 
+HAudio::HAudio(HStatus *status, HCallJava *callJava) {
+    this->status = status;
+    this->callJava = callJava;
+}
+
 HAudio::HAudio(HStatus *status, HCallJava *callJava,int sample_rate) {
     this->status = status;
     this->callJava = callJava;
@@ -39,12 +44,6 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf caller, void *pContext) {
                                           static_cast<SLuint32>(audio->pcm_data_size));
     }
 
-//    audio->getPcmData(&audio->out_buffer_point);
-//    if(audio->out_buffer && audio->pcm_data_size>0){
-//        //利用OpenSLES播放音频数据
-//        (*audio->pcmBufferQueue)->Enqueue(audio->pcmBufferQueue, audio->out_buffer_point,
-//                                          static_cast<SLuint32>(audio->pcm_data_size));
-//    }
 }
 
 void HAudio::initOpenSL() {
@@ -110,8 +109,8 @@ int HAudio::getPcmData(void **out_buffer_point) {
     while(!status->exit){
         int result;
         AVPacket *packet = NULL;
-        if(isReadFrameFinished){//此时需要把一个新的packet放入到解码器中
-            isReadFrameFinished = false;
+        if(isReadPacketFinished){//此时需要把一个新的packet放入到解码器中
+            isReadPacketFinished = false;
             packet = queue->getPacket();
             //把packet放到解码器中
             result = avcodec_send_packet(avCodecContext,packet);
@@ -119,7 +118,7 @@ int HAudio::getPcmData(void **out_buffer_point) {
                 av_packet_free(&packet);
                 av_free(packet);
                 packet = NULL;
-                isReadFrameFinished = true;
+                isReadPacketFinished = true;
                 continue;
             }
         }
@@ -128,7 +127,7 @@ int HAudio::getPcmData(void **out_buffer_point) {
         ////从解码器中接收packet解压缩到avFrame，一个avPacket中可能有多个avFrame
         result = avcodec_receive_frame(avCodecContext,frame);
         if(result==0){
-            isReadFrameFinished = false;
+            isReadPacketFinished = false;
             //更正frame中的声道和声道布局信息
             if(frame->channels==0 && frame->channel_layout>0){
                 frame->channels = av_get_channel_layout_nb_channels(frame->channel_layout);
@@ -181,7 +180,7 @@ int HAudio::getPcmData(void **out_buffer_point) {
             *out_buffer_point = out_buffer;
             break;
         }else{
-            isReadFrameFinished = true;
+            isReadPacketFinished = true;
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;
@@ -241,6 +240,7 @@ int HAudio::getCurrentSampleRateForOpenSLES(int sample_rate) {
     }
     return rate;
 }
+
 
 
 

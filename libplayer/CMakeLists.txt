@@ -16,6 +16,7 @@ add_library( # Sets the name of the library.
              src/main/cpp/HVideo.cpp
              src/main/cpp/HStatus.cpp
              src/main/cpp/HQueue.cpp
+             src/main/cpp/HChannel.cpp
              )
 
 add_library( avcodec-57

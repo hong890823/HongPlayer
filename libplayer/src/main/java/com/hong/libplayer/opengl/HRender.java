@@ -8,6 +8,8 @@ import android.opengl.GLSurfaceView;
 import android.view.Surface;
 
 import com.hong.libplayer.R;
+import com.hong.libplayer.listener.HOnGlSurfaceViewCreateListener;
+import com.hong.libplayer.listener.HOnRenderRefreshListener;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -18,9 +20,12 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
     public static final int RENDER_YUV = 1;
-    public static final int RENDER_MEDIACODEC = 2;
+    public static final int RENDER_MEDIA_CODEC = 2;
 
     private Context context;
+
+    private HOnGlSurfaceViewCreateListener onGlSurfaceViewCreateListener;
+    private HOnRenderRefreshListener onRenderRefreshListener;
 
     private final float[] vertexData ={
 
@@ -67,9 +72,6 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
     private SurfaceTexture surfaceTexture;
     private Surface surface;
 
-    private OnSurfaceCreateListener onSurfaceCreateListener;
-    private OnRenderListener onRenderListener;
-
     HRender(Context context)
     {
         this.context = context;
@@ -85,16 +87,17 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
                 .put(textureData);
         textureBuffer.position(0);
     }
-    public void setRenderType(int renderType) {
-        this.renderType = renderType;
+
+    public void setOnGlSurfaceViewCreateListener(HOnGlSurfaceViewCreateListener onGlSurfaceViewCreateListener) {
+        this.onGlSurfaceViewCreateListener = onGlSurfaceViewCreateListener;
     }
 
-    public void setOnSurfaceCreateListener(OnSurfaceCreateListener onSurfaceCreateListener) {
-        this.onSurfaceCreateListener = onSurfaceCreateListener;
+    public void setOnRenderRefreshListener(HOnRenderRefreshListener onRenderRefreshListener) {
+        this.onRenderRefreshListener = onRenderRefreshListener;
     }
 
-    public void setOnRenderListener(OnRenderListener onRenderListener) {
-        this.onRenderListener = onRenderListener;
+    void setCodecType(int codecType){
+        this.renderType = codecType;
     }
 
     @Override
@@ -115,7 +118,7 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         if(renderType == RENDER_YUV) {
             renderYUV();
         }
-        else if(renderType == RENDER_MEDIACODEC){
+        else if(renderType == RENDER_MEDIA_CODEC){
             renderMediaCodec();
         }
         //不管数据是否符合条件都要画一遍矩形，否则会出现黑色闪屏
@@ -125,13 +128,12 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
     //硬解刷新界面的方法。SurfaceTexture有数据就会调动这个方法，surfacetexture绑定的surface给了mediacodec.
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-        if(onRenderListener != null) {
-            onRenderListener.onRender();
+        if(onRenderRefreshListener != null) {
+            onRenderRefreshListener.onRefresh();
         }
     }
 
-    private void initRenderYUV()
-    {
+    private void initRenderYUV(){
         String vertexSource = HShaderUtil.readRawTxt(context, R.raw.vertex_shader);
         String fragmentSource = HShaderUtil.readRawTxt(context, R.raw.fragment_yuv);
         program_yuv = HShaderUtil.createProgram(vertexSource, fragmentSource);
@@ -157,8 +159,7 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         }
     }
 
-    public void setYUVRenderData(int width, int height, byte[] y, byte[] u, byte[] v)
-    {
+    void setYUVRenderData(int width, int height, byte[] y, byte[] u, byte[] v) {
         this.width_yuv = width;
         this.height_yuv = height;
         this.y = ByteBuffer.wrap(y);
@@ -166,10 +167,8 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         this.v = ByteBuffer.wrap(v);
     }
 
-    private void renderYUV()
-    {
-        if(width_yuv > 0 && height_yuv > 0 && y != null && u != null && v != null)
-        {
+    private void renderYUV(){
+        if(width_yuv > 0 && height_yuv > 0 && y != null && u != null && v != null){
             GLES20.glUseProgram(program_yuv);
 
             GLES20.glEnableVertexAttribArray(avPosition_yuv);
@@ -205,8 +204,7 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         }
     }
 
-    private void initRenderMediaCodec()
-    {
+    private void initRenderMediaCodec(){
         String vertexSource = HShaderUtil.readRawTxt(context, R.raw.vertex_shader);
         String fragmentSource = HShaderUtil.readRawTxt(context, R.raw.fragment_mediacodec);
         program_mediacodec = HShaderUtil.createProgram(vertexSource, fragmentSource);
@@ -228,13 +226,12 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         surface = new Surface(surfaceTexture);
         surfaceTexture.setOnFrameAvailableListener(this);
 
-        if(onSurfaceCreateListener != null){
-            onSurfaceCreateListener.onSurfaceCreate(surface);
+        if(onGlSurfaceViewCreateListener != null){
+            onGlSurfaceViewCreateListener.onGlSurfaceViewCreate(surface);
         }
     }
 
-    private void renderMediaCodec()
-    {
+    private void renderMediaCodec(){
         surfaceTexture.updateTexImage();
         GLES20.glUseProgram(program_mediacodec);
 
@@ -247,15 +244,6 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId_mediacodec);
         GLES20.glUniform1i(samplerOES_mediacodec, 0);
-    }
-
-    public interface OnSurfaceCreateListener
-    {
-        void onSurfaceCreate(Surface surface);
-    }
-
-    public interface OnRenderListener{
-        void onRender();
     }
 
 }

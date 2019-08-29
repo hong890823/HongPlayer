@@ -29,7 +29,7 @@ public:
     int pcm_data_size;//pcm重采样之后的数据大小
     uint8_t *out_buffer = NULL;
     //因为一个packet中会包含多个frame，所以该变量用来判断一个packet中的frame是否已经读取完毕，用来决定有没有必要avcodec_send_packet
-    bool isReadFrameFinished = false;
+    bool isReadPacketFinished = true;
     void *out_buffer_point = NULL;
 
     HStatus *status;
@@ -50,7 +50,11 @@ public:
     SLMuteSoloItf  pcmPlayerMuteSolo = NULL;
     SLAndroidSimpleBufferQueueItf pcmBufferQueue = NULL;
 
+    bool isExit = false;
+    bool hasVideo = false;
+
 public:
+    HAudio(HStatus *status,HCallJava *callJava);
     HAudio(HStatus *status,HCallJava *callJava,int sample_rate);
     ~HAudio();
     void playAudio();

@@ -1,0 +1,15 @@
+//
+// Created by liuyang on 2019-08-26.
+//
+
+#ifndef HONGPLAYER_HCOMMONCODE_H
+#define HONGPLAYER_HCOMMONCODE_H
+
+#define H_ERROR_INIT -1
+
+#define H_MIMETYPE_H264 1
+#define H_MIMETYPE_HEVC 2
+#define H_MIMETYPE_MPEG4 3
+#define H_MIMETYPE_WMV3 4
+
+#endif //HONGPLAYER_HCOMMONCODE_H

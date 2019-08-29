@@ -10,6 +10,9 @@
 #include "HCallJava.h"
 #include "HAudio.h"
 #include "HStatus.h"
+#include "HVideo.h"
+#include "HChannel.h"
+#include "HCommonCode.h"
 
 extern "C"{
 #include <libavformat/avformat.h>
@@ -27,14 +30,29 @@ public:
 
     HCallJava *callJava = NULL;
     HAudio *audio = NULL;
+    HVideo *video = NULL;
     HStatus *status = NULL;
+
+    bool isOnlyMusic = false;
+    bool exit = false;
+    int mimeType = 1;
+
+    std::deque<HChannel*> audioChannels;
+    std::deque<HChannel*> videoChannels;
+
+
 public:
     HFFmpeg(HCallJava *callJava,const char *url);
     ~HFFmpeg();
     void prepareFFmpeg();
     void decodeFFmpeg();
-    void getDecodeContext(AVCodecParameters *codecpar,HBaseAV *av);//获取解码器上下文
+    //返回0成功，否则失败
+    int getDecodeContext(AVCodecParameters *codecpar,HBaseAV *av);//获取解码器上下文
     void startPlay();
+    void setAudioChannel(int index);
+    void setVideoChannel(int index);
+    void callError(int errorCode,char *errorMsg);
+    int getMimeType(const char* codecName);
 };
 
 

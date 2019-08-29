@@ -11,11 +11,6 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.hongplayer.R;
-import com.hongplayer.bean.apiopen.VideoContent;
-import com.hongplayer.bean.apiopen.VideoContentData;
-import com.hongplayer.bean.apiopen.VideoCover;
-import com.hongplayer.bean.apiopen.VideoData;
-import com.hongplayer.bean.apiopen.VideoResult;
 import com.hongplayer.bean.idataapi.BiliLiveData;
 
 import java.util.List;
@@ -24,13 +19,13 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 
 
-public class VideoListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>{
+public class LiveListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>{
 
     private Context context;
-    private List<VideoResult> datas;
+    private List<BiliLiveData> datas;
     private OnItemClickListener onItemClickListener;
 
-    public VideoListAdapter(Context context, List<VideoResult> datas) {
+    public LiveListAdapter(Context context, List<BiliLiveData> datas) {
         this.context = context;
         this.datas = datas;
     }
@@ -68,38 +63,22 @@ public class VideoListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             }
         }
 
-        VideoResult videoResult = datas.get(position);
-        VideoData videoData = videoResult.getData();
-        if(videoData!=null){
-            VideoContent videoContent = videoData.getContent();
-            if(videoContent!=null){
-                VideoContentData videoContentData = videoContent.getData();
-                if(videoContentData!=null){
-                    String title = videoContentData.getTitle();
-                    if(title!=null){
-                        myHolder.tvName.setText(title);
-                    }
-                    final String playUrl = videoContentData.getPlayUrl();
-                    if(playUrl!=null){
-                        myHolder.rlItem.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                if(onItemClickListener != null) {
-                                    onItemClickListener.onItemClick(playUrl);
-                                }
-                            }
-                        });
-                    }
-                    VideoCover videoCover = videoContentData.getCover();
-                    if(videoCover!=null){
-                        String homePage = videoCover.getHomepage();
-                        if(homePage!=null){
-                            Glide.with(context).load(homePage).into(myHolder.ivBg);
-                        }
-                    }
+        final BiliLiveData biliLiveData = datas.get(position);
+        List<String> videoUrls = biliLiveData.getVideoUrls();
+        if(videoUrls!=null && videoUrls.size()>0){
+            myHolder.tvName.setText(biliLiveData.getTitle()+(videoUrls.isEmpty()?"":"(有效数据)"));
+        }else{
+            myHolder.tvName.setText(biliLiveData.getTitle());
+        }
+        Glide.with(context).load(biliLiveData.getCoverUrl()).into(myHolder.ivBg);
+        myHolder.rlItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(onItemClickListener != null) {
+                    onItemClickListener.onItemClick(biliLiveData);
                 }
             }
-        }
+        });
 
     }
 
@@ -129,7 +108,7 @@ public class VideoListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     }
 
     public interface OnItemClickListener {
-        void onItemClick(String playUrl);
+        void onItemClick(BiliLiveData biliLiveData);
     }
 
 }
