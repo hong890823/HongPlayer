@@ -47,8 +47,8 @@ public class MainActivity extends BaseActivity {
     private List<Fragment> fragmentPages;
     private int currentIndex = -1;
 
-    private String[] titles = {"视频", "广播", "本地", "关于"};
-    private int[] imgs = {R.drawable.nav_video_selector, R.drawable.nav_audio_selector, R.drawable.nav_file_selector, R.drawable.nav_about_selector};
+    private String[] titles = {"视频", "直播","广播", "本地", "关于"};
+    private int[] imgs = {R.drawable.nav_video_selector, R.drawable.nav_video_selector,R.drawable.nav_audio_selector, R.drawable.nav_file_selector, R.drawable.nav_about_selector};
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {

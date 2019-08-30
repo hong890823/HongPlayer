@@ -13,7 +13,10 @@ HQueue::HQueue(HStatus *status) {
 }
 
 HQueue::~HQueue() {
-
+    pthread_mutex_destroy(&mutexPacket);
+    pthread_mutex_destroy(&mutexFrame);
+    pthread_cond_destroy(&condPacket);
+    pthread_cond_destroy(&condFrame);
 }
 
 /**
@@ -30,7 +33,7 @@ AVPacket* HQueue::getPacket() {
     pthread_mutex_lock(&mutexPacket);
     AVPacket *packet = NULL;
     while(!status->exit){
-        if(queuePacket.size()>0){
+        if(!queuePacket.empty()){
             packet = queuePacket.front();
             queuePacket.pop();
         }else{
@@ -39,5 +42,36 @@ AVPacket* HQueue::getPacket() {
     }
     pthread_mutex_unlock(&mutexPacket);
     return packet;
+}
+
+int HQueue::getPacketQueueSize() {
+    int size = 0;
+    pthread_mutex_lock(&mutexPacket);
+    size = queuePacket.size();
+    pthread_mutex_unlock(&mutexPacket);
+    return size;
+}
+
+int HQueue::getFrameQueueSize() {
+    return 0;
+}
+
+int HQueue::clearPacketQueue() {
+    pthread_cond_signal(&condPacket);
+    pthread_mutex_lock(&mutexPacket);
+    while(!queuePacket.empty()){
+        AVPacket *packet = queuePacket.front();
+        queuePacket.pop();
+        av_packet_free(&packet);
+        av_free(packet);
+        packet = nullptr;
+
+    }
+    pthread_mutex_unlock(&mutexPacket);
+    return 0;
+}
+
+int HQueue::clearFrameQueue() {
+    return 0;
 }
 

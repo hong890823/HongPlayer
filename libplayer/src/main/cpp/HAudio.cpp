@@ -9,6 +9,7 @@
 HAudio::HAudio(HStatus *status, HCallJava *callJava) {
     this->status = status;
     this->callJava = callJava;
+    this->queue = new HQueue(status);
 }
 
 HAudio::HAudio(HStatus *status, HCallJava *callJava,int sample_rate) {
@@ -109,6 +110,10 @@ int HAudio::getPcmData(void **out_buffer_point) {
     while(!status->exit){
         int result;
         AVPacket *packet = NULL;
+        if(queue->getPacketQueueSize()==0){
+            av_usleep(1000*100);
+            continue;
+        }
         if(isReadPacketFinished){//此时需要把一个新的packet放入到解码器中
             isReadPacketFinished = false;
             packet = queue->getPacket();

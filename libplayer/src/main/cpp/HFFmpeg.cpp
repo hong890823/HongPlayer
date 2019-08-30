@@ -163,7 +163,18 @@ void HFFmpeg::startPlay() {
         //这步很关键，得把frame的信息存到packet中再放入队列中
         int result = av_read_frame(avformatContext,packet);
         if(result==0){
-            audio->queue->putPacket(packet);
+//            if(packet->stream_index==audio->streamIndex){
+                audio->queue->putPacket(packet);
+//            }else{
+//                av_packet_free(&packet);
+//                av_free(packet);
+//                packet = nullptr;
+//            }
+
+        }else{
+            av_packet_free(&packet);
+            av_free(packet);
+            packet = nullptr;
         }
     }
 

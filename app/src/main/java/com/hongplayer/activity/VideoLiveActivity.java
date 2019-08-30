@@ -24,8 +24,7 @@ public class VideoLiveActivity extends BaseActivity implements HOnPreparedListen
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video_live);
-//        liveUrl = (String) getIntent().getExtras().get("url");
-        liveUrl = "http://ali.cdn.kaiyanapp.com/1566296371445_9236d1c3.mp4?auth_key=1566890429-0-0-ad6449725948e182dff26f1526f97383";
+        liveUrl = (String) getIntent().getExtras().get("url");
         liveUrl = deleteHttps(liveUrl);
         player = new HPlayer();
         player.setOnPreparedListener(this);

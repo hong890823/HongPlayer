@@ -18,6 +18,7 @@ extern "C"{
 #include <libavcodec/avcodec.h>
 #include <libswresample/swresample.h>
 #include <libavformat/avformat.h>
+#include <libavutil/time.h>
 };
 
 class HAudio :public HBaseAV{

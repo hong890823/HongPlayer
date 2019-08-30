@@ -27,6 +27,11 @@ public:
     ~HQueue();
     void putPacket(AVPacket *packet);
     AVPacket* getPacket();
+    int getPacketQueueSize();
+    int getFrameQueueSize();
+    int clearPacketQueue();
+    int clearFrameQueue();
+
 
 };
 
