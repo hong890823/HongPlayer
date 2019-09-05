@@ -157,20 +157,25 @@ int HFFmpeg::getDecodeContext(AVCodecParameters *codecParameters,HBaseAV *av) {
 
 void HFFmpeg::startPlay() {
     if(audio!= nullptr)audio->playAudio();
-
+    int count = 0;
     while(!status->exit){
+        if(audio!= nullptr && audio->queue->getPacketQueueSize()>100){
+            av_usleep(1000*100);
+            continue;
+        }
         AVPacket *packet = av_packet_alloc();
         //这步很关键，得把frame的信息存到packet中再放入队列中
         int result = av_read_frame(avformatContext,packet);
         if(result==0){
-//            if(packet->stream_index==audio->streamIndex){
+            if(audio!=nullptr && packet->stream_index==audio->streamIndex){
+                count++;
+//                LOGD("放入第%d个Packet进队列",count);
                 audio->queue->putPacket(packet);
-//            }else{
-//                av_packet_free(&packet);
-//                av_free(packet);
-//                packet = nullptr;
-//            }
-
+            }else{
+                av_packet_free(&packet);
+                av_free(packet);
+                packet = nullptr;
+            }
         }else{
             av_packet_free(&packet);
             av_free(packet);

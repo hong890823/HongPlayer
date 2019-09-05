@@ -10,6 +10,7 @@
 #include "HBaseAV.h"
 #include "HQueue.h"
 #include "pthread.h"
+#include "HLog.h"
 
 extern "C"{
 #include <SLES/OpenSLES.h>

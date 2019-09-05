@@ -26,7 +26,7 @@ public:
     HQueue(HStatus *status);
     ~HQueue();
     void putPacket(AVPacket *packet);
-    AVPacket* getPacket();
+    int getPacket(AVPacket *packet);
     int getPacketQueueSize();
     int getFrameQueueSize();
     int clearPacketQueue();

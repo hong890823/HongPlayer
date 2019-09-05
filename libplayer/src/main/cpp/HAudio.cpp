@@ -36,8 +36,8 @@ void HAudio::playAudio() {
 
 //线程方法回调
 void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf caller, void *pContext) {
+    LOGD("音频播放准备完毕，开始回调数据");
     HAudio *audio = static_cast<HAudio *>(pContext);
-
     audio->out_buffer_point = NULL;
     audio->pcm_data_size = audio->getPcmData(&audio->out_buffer_point);
     if(audio->out_buffer_point && audio->pcm_data_size>0){
@@ -107,22 +107,35 @@ void HAudio::initOpenSL() {
  * 返回每一帧的pcm数据大小，并且在这个过程中把重采样的pcm数据存储起来
  * */
 int HAudio::getPcmData(void **out_buffer_point) {
+    LOGD("开始读取音频数据");
+    int count = 0;
     while(!status->exit){
         int result;
-        AVPacket *packet = NULL;
+        AVPacket *packet = nullptr;
         if(queue->getPacketQueueSize()==0){
             av_usleep(1000*100);
             continue;
         }
+        LOGE("123456789");
         if(isReadPacketFinished){//此时需要把一个新的packet放入到解码器中
             isReadPacketFinished = false;
-            packet = queue->getPacket();
+            LOGE("11111111");
+            packet = av_packet_alloc();
+            if(queue->getPacket(packet)!=0){
+                av_packet_free(&packet);
+                av_free(packet);
+                packet = nullptr;
+                isReadPacketFinished = true;
+                continue;
+            }
+            count++;
+            LOGE("从队列中取出第%d个Packet",count);
             //把packet放到解码器中
             result = avcodec_send_packet(avCodecContext,packet);
             if(result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF){
                 av_packet_free(&packet);
                 av_free(packet);
-                packet = NULL;
+                packet = nullptr;
                 isReadPacketFinished = true;
                 continue;
             }
@@ -137,7 +150,7 @@ int HAudio::getPcmData(void **out_buffer_point) {
             if(frame->channels==0 && frame->channel_layout>0){
                 frame->channels = av_get_channel_layout_nb_channels(frame->channel_layout);
             }
-            if(frame->channel_layout==0 && frame->channels>0){
+            if(frame->channel_layout>0 && frame->channels==0){
                 frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(frame->channels));
             }
             //重采样初始化（不能改变采样率，要改变采样率需要FFmpegFilter才可以）
