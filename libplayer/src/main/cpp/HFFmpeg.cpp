@@ -101,6 +101,7 @@ void HFFmpeg::decodeFFmpeg() {
     if(audio!= nullptr){
         audio->duration = static_cast<int>(avformatContext->duration / 1000000);
         audio->in_sample_rate = audio->avCodecContext->sample_rate;
+        audio->sample_rate = audio->avCodecContext->sample_rate;
         if(video!= nullptr){
             audio->hasVideo = true;
         }

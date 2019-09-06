@@ -9,6 +9,7 @@
 HAudio::HAudio(HStatus *status, HCallJava *callJava) {
     this->status = status;
     this->callJava = callJava;
+    out_buffer = (uint8_t *) malloc(sample_rate * 2 * 2 * 2 / 3);
     this->queue = new HQueue(status);
 }
 
@@ -16,7 +17,7 @@ HAudio::HAudio(HStatus *status, HCallJava *callJava,int sample_rate) {
     this->status = status;
     this->callJava = callJava;
     this->in_sample_rate = sample_rate;
-    out_buffer = static_cast<uint8_t *>(av_malloc(static_cast<size_t>(sample_rate * 2 * 2)));
+    out_buffer = (uint8_t *) malloc(sample_rate * 2 * 2 * 2 / 3);
     this->queue = new HQueue(status);
 }
 
@@ -145,13 +146,11 @@ int HAudio::getPcmData(void **out_buffer_point) {
         ////从解码器中接收packet解压缩到avFrame，一个avPacket中可能有多个avFrame
         result = avcodec_receive_frame(avCodecContext,frame);
         if(result==0){
-            isReadPacketFinished = false;
             //更正frame中的声道和声道布局信息
-            if(frame->channels==0 && frame->channel_layout>0){
-                frame->channels = av_get_channel_layout_nb_channels(frame->channel_layout);
-            }
-            if(frame->channel_layout>0 && frame->channels==0){
+            if(frame->channels>0 && frame->channel_layout==0){
                 frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(frame->channels));
+            }else if(frame->channels==0 && frame->channel_layout>0){
+                frame->channels = av_get_channel_layout_nb_channels(frame->channel_layout);
             }
             //重采样初始化（不能改变采样率，要改变采样率需要FFmpegFilter才可以）
             int64_t out_ch_layout = AV_CH_LAYOUT_STEREO;//（立体声）
@@ -164,7 +163,7 @@ int HAudio::getPcmData(void **out_buffer_point) {
                     frame->channel_layout,//输入声道布局
                     static_cast<AVSampleFormat>(frame->format),//输入采样位数
                     frame->sample_rate,//输入采样率
-                    NULL, NULL
+                    0, NULL
             );
             //说明该frame重采样失败
             if(!swrContext || swr_init(swrContext)<0){
@@ -175,11 +174,16 @@ int HAudio::getPcmData(void **out_buffer_point) {
                 swrContext = NULL;
                 continue;
             }
+            //计算转换后的sample个数 a * b / c
+            dst_nb_samples = av_rescale_rnd(
+                    swr_get_delay(swrContext, frame->sample_rate) + frame->nb_samples,
+                    frame->sample_rate, frame->sample_rate, AV_ROUND_INF);
+
             //out_sample_rate就是重采样后的采样率大小，实际数据存在了out_buffer中
             out_sample_rate = swr_convert(
                     swrContext,
                     &out_buffer,//buffer定成1秒需要的内存空间就足够，真实的重采样根本不到1秒
-                    frame->nb_samples,//输出采样个数（这里和输入的一样）
+                    dst_nb_samples,//输出采样个数（
                     (const uint8_t **) frame->data,//输入的数据
                     frame->nb_samples//输入的采样个数
             );

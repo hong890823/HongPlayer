@@ -28,6 +28,8 @@ public:
 public:
     int in_sample_rate;//输入采样率，单位时间从连续信号中提取离散信号的个数，单位Hz
     int out_sample_rate;//重采样之后的输出采样率
+    int dst_nb_samples = 0;// 计算转换后的sample个数 a * b / c
+    int sample_rate = 44100;
     int pcm_data_size;//pcm重采样之后的数据大小
     uint8_t *out_buffer = NULL;
     //因为一个packet中会包含多个frame，所以该变量用来判断一个packet中的frame是否已经读取完毕，用来决定有没有必要avcodec_send_packet
