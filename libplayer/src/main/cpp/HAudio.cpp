@@ -9,7 +9,7 @@
 HAudio::HAudio(HStatus *status, HCallJava *callJava) {
     this->status = status;
     this->callJava = callJava;
-    out_buffer = (uint8_t *) malloc(sample_rate * 2 * 2 * 2 / 3);
+    out_buffer = (uint8_t *) malloc(static_cast<size_t>(in_sample_rate * 2 * 2 * 2 / 3));
     this->queue = new HQueue(status);
 }
 
@@ -17,7 +17,7 @@ HAudio::HAudio(HStatus *status, HCallJava *callJava,int sample_rate) {
     this->status = status;
     this->callJava = callJava;
     this->in_sample_rate = sample_rate;
-    out_buffer = (uint8_t *) malloc(sample_rate * 2 * 2 * 2 / 3);
+    out_buffer = (uint8_t *) malloc(static_cast<size_t>(sample_rate * 2 * 2 * 2 / 3));
     this->queue = new HQueue(status);
 }
 
@@ -26,7 +26,7 @@ HAudio::~HAudio() {
 }
 
 void *decodeAudio(void *data){
-    HAudio *audio = static_cast<HAudio *>(data);
+    auto *audio = static_cast<HAudio *>(data);
     audio->initOpenSL();
     pthread_exit(&audio->audioThread);
 }
@@ -38,10 +38,11 @@ void HAudio::playAudio() {
 //线程方法回调
 void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf caller, void *pContext) {
     LOGD("音频播放准备完毕，开始回调数据");
-    HAudio *audio = static_cast<HAudio *>(pContext);
-    audio->out_buffer_point = NULL;
+    auto *audio = static_cast<HAudio *>(pContext);
+    audio->out_buffer_point = nullptr;
     audio->pcm_data_size = audio->getPcmData(&audio->out_buffer_point);
     if(audio->out_buffer_point && audio->pcm_data_size>0){
+        audio->clock
         (*audio->pcmBufferQueue)->Enqueue(audio->pcmBufferQueue, audio->out_buffer_point,
                                           static_cast<SLuint32>(audio->pcm_data_size));
     }
@@ -106,6 +107,9 @@ void HAudio::initOpenSL() {
 
 /**
  * 返回每一帧的pcm数据大小，并且在这个过程中把重采样的pcm数据存储起来
+ * 音频播放处理的事AVFrame
+ * 不过音频的队列只操作了packet队列，因为音频一个packet对应一个frame
+ * 所以从packet队列中拿出数据转成frame再播放就可以了
  * */
 int HAudio::getPcmData(void **out_buffer_point) {
     LOGD("开始读取音频数据");
@@ -117,33 +121,27 @@ int HAudio::getPcmData(void **out_buffer_point) {
             av_usleep(1000*100);
             continue;
         }
-        LOGE("123456789");
         if(isReadPacketFinished){//此时需要把一个新的packet放入到解码器中
             isReadPacketFinished = false;
-            LOGE("11111111");
             packet = av_packet_alloc();
             if(queue->getPacket(packet)!=0){
-                av_packet_free(&packet);
-                av_free(packet);
-                packet = nullptr;
+                freeAVPacket(packet);
                 isReadPacketFinished = true;
                 continue;
             }
             count++;
             LOGE("从队列中取出第%d个Packet",count);
-            //把packet放到解码器中
+            ///把packet放到解码器中
             result = avcodec_send_packet(avCodecContext,packet);
             if(result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF){
-                av_packet_free(&packet);
-                av_free(packet);
-                packet = nullptr;
+                freeAVPacket(packet);
                 isReadPacketFinished = true;
                 continue;
             }
         }
 
         AVFrame *frame = av_frame_alloc();
-        ////从解码器中接收packet解压缩到avFrame，一个avPacket中可能有多个avFrame
+        ///从解码器中接收packet解压缩到avFrame，对于音频而言一般一个packet对应一个frame
         result = avcodec_receive_frame(avCodecContext,frame);
         if(result==0){
             //更正frame中的声道和声道布局信息
@@ -154,61 +152,53 @@ int HAudio::getPcmData(void **out_buffer_point) {
             }
             //重采样初始化（不能改变采样率，要改变采样率需要FFmpegFilter才可以）
             int64_t out_ch_layout = AV_CH_LAYOUT_STEREO;//（立体声）
+            ///量化位数（量化位数为16则代表每个采样点占2个字节）
             AVSampleFormat out_sample_format = AV_SAMPLE_FMT_S16;
             SwrContext *swrContext = swr_alloc_set_opts(
-                    NULL,
+                    nullptr,
                     out_ch_layout,//输出声道布局
-                    out_sample_format,//输出重采样的位数
+                    out_sample_format,//输出重采样的量化位数
                     frame->sample_rate,//输出采样率
                     frame->channel_layout,//输入声道布局
-                    static_cast<AVSampleFormat>(frame->format),//输入采样位数
+                    static_cast<AVSampleFormat>(frame->format),//输入量化位数
                     frame->sample_rate,//输入采样率
-                    0, NULL
+                    0, nullptr
             );
             //说明该frame重采样失败
             if(!swrContext || swr_init(swrContext)<0){
-                av_frame_free(&frame);
-                av_free(frame);
-                frame = NULL;
+                freeAVFrame(frame);
                 swr_free(&swrContext);
-                swrContext = NULL;
+                swrContext = nullptr;
                 continue;
             }
-            //计算转换后的sample个数 a * b / c
-            dst_nb_samples = av_rescale_rnd(
-                    swr_get_delay(swrContext, frame->sample_rate) + frame->nb_samples,
-                    frame->sample_rate, frame->sample_rate, AV_ROUND_INF);
+            //该共四个参数a,b,c,常量d...函数作用a*b/c     ？常用语时间基转换
+            int out_count = static_cast<int>(av_rescale_rnd(
+                                swr_get_delay(swrContext, frame->sample_rate) + frame->nb_samples,
+                                frame->sample_rate, frame->sample_rate, AV_ROUND_INF));
 
-            //out_sample_rate就是重采样后的采样率大小，实际数据存在了out_buffer中
-            out_sample_rate = swr_convert(
+            //计算转换后的采样个数，实际数据存在了out_buffer中
+            out_nb_samples = swr_convert(
                     swrContext,
                     &out_buffer,//buffer定成1秒需要的内存空间就足够，真实的重采样根本不到1秒
-                    dst_nb_samples,//输出采样个数（
+                    out_count,
                     (const uint8_t **) frame->data,//输入的数据
                     frame->nb_samples//输入的采样个数
             );
             int out_channels = av_get_channel_layout_nb_channels(static_cast<uint64_t>(out_ch_layout));
-            pcm_data_size = out_sample_rate*out_channels*av_get_bytes_per_sample(out_sample_format);//比如44100*2*2
+            /// 每帧采样个数*量化位数占用字节*声道数
+            pcm_data_size = out_nb_samples*av_get_bytes_per_sample(out_sample_format)*out_channels;
             //已经正确的获取了该frame的pcm数据，可以退出循环了
-            av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
-            av_frame_free(&frame);
-            av_free(frame);
-            frame = NULL;
+            freeAVPacket(packet);
+            freeAVFrame(frame);
             swr_free(&swrContext);
-            swrContext = NULL;
+            swrContext = nullptr;
 
             *out_buffer_point = out_buffer;
             break;
         }else{
             isReadPacketFinished = true;
-            av_frame_free(&frame);
-            av_free(frame);
-            frame = NULL;
-            av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
+            freeAVFrame(frame);
+            freeAVPacket(packet);
             continue;
         }
     }
@@ -263,7 +253,17 @@ int HAudio::getCurrentSampleRateForOpenSLES(int sample_rate) {
     return rate;
 }
 
+void HAudio::freeAVPacket(AVPacket *packet) {
+    av_packet_free(&packet);
+    av_free(packet);
+    packet = nullptr;
+}
 
+void HAudio::freeAVFrame(AVFrame *frame) {
+    av_frame_free(&frame);
+    av_free(frame);
+    frame = nullptr;
+}
 
 
 

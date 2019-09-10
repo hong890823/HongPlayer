@@ -22,6 +22,10 @@ public class VideoLiveActivity extends BaseActivity implements HOnPreparedListen
      * 真视通-大华摄像头：rtsp://admin:zst123456@10.1.26.230:554/cam/realmonitor?channel=1&subtype=0
      * 真视通-89流媒体：rtsp://10.1.6.89/cam/realmonitor
      * */
+
+    /**
+     * http://www.imooc.com/article/91381
+     * */
     private String liveUrl;
     private HPlayer player;
     @Override

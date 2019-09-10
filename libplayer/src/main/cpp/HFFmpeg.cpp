@@ -33,28 +33,29 @@ void HFFmpeg::decodeFFmpeg() {
     pthread_mutex_init(&initMutex,nullptr);
     av_register_all();
     avformat_network_init();
-    avformatContext = avformat_alloc_context();
-    if(avformatContext== nullptr){
+    avFormatContext = avformat_alloc_context();
+    if(avFormatContext== nullptr){
         if(LOG_SHOW)LOGE("context is null");
         callError(H_ERROR_INIT,const_cast<char *>("context is null"));
         pthread_mutex_unlock(&initMutex);
     }
-    //现在的avformat_open_input方法无法支持https协议，如果支持需要重新编译库。
-    //现下不是重点，先放一边。
-    if(avformat_open_input(&avformatContext,url,nullptr,nullptr)!=0){
+    /*现在的avformat_open_input方法无法支持https协议，如果支持需要重新编译库。
+     *现下不是重点，先放一边。
+     */
+    if(avformat_open_input(&avFormatContext,url,nullptr,nullptr)!=0){
         if(LOG_SHOW)LOGE("open input url error:%s",url);
         callError(H_ERROR_INIT,const_cast<char *>("open input url error:%s",url));
         pthread_mutex_unlock(&initMutex);
     }
-    if(avformat_find_stream_info(avformatContext,nullptr)<0){
+    if(avformat_find_stream_info(avFormatContext,nullptr)<0){
         if(LOG_SHOW)LOGE("find stream info error");
         callError(H_ERROR_INIT,const_cast<char *>("find stream info error"));
         pthread_mutex_unlock(&initMutex);
     }
 
-    AVCodecParameters *avCodecParameters = NULL;
-    for(int i=0;i<avformatContext->nb_streams;i++){
-        AVStream *avStream = avformatContext->streams[i];
+    AVCodecParameters *avCodecParameters = nullptr;
+    for(int i=0;i<avFormatContext->nb_streams;i++){
+        AVStream *avStream = avFormatContext->streams[i];
         avCodecParameters = avStream->codecpar;
         if(AVMEDIA_TYPE_AUDIO==avCodecParameters->codec_type){//音频
             auto *audioChannel = new HChannel(i,avStream->time_base);
@@ -62,10 +63,10 @@ void HFFmpeg::decodeFFmpeg() {
         }
         if(AVMEDIA_TYPE_VIDEO==avCodecParameters->codec_type){//视频
             if(!isOnlyMusic){
-                //?计算fps的方法
                 int num = avStream->avg_frame_rate.num;
                 int den = avStream->avg_frame_rate.den;
                 if(num!=0 && den!=0){
+                    //?计算fps的方法,这个算法怎么和时间基的算法一样
                     int fps = num/den;
                     auto *videoChannel = new HChannel(i,avStream->time_base,fps);
                     videoChannels.push_front(videoChannel);
@@ -74,10 +75,10 @@ void HFFmpeg::decodeFFmpeg() {
         }
     }
 
-    if(!audioChannels.empty() && avCodecParameters!= NULL){
+    if(!audioChannels.empty() && avCodecParameters!= nullptr){
         audio = new HAudio(status,callJava);
         setAudioChannel(0);
-        if(audio->streamIndex>=0 && audio->streamIndex<avformatContext->nb_streams){
+        if(audio->streamIndex>=0 && audio->streamIndex<avFormatContext->nb_streams){
             if(getDecodeContext(avCodecParameters,audio)){
                 callError(H_ERROR_INIT, const_cast<char *>("getDecodeContext audio error"));
                 pthread_mutex_unlock(&initMutex);
@@ -87,7 +88,7 @@ void HFFmpeg::decodeFFmpeg() {
     if(!videoChannels.empty() && avCodecParameters!= nullptr){
         video = new HVideo(status,callJava);
         setVideoChannel(0);
-        if(audio->streamIndex>=0 && audio->streamIndex<avformatContext->nb_streams){
+        if(audio->streamIndex>=0 && audio->streamIndex<avFormatContext->nb_streams){
             if(getDecodeContext(avCodecParameters,video)){
                 callError(H_ERROR_INIT, const_cast<char *>("getDecodeContext video error"));
                 pthread_mutex_unlock(&initMutex);
@@ -99,9 +100,8 @@ void HFFmpeg::decodeFFmpeg() {
         pthread_mutex_unlock(&initMutex);
     }
     if(audio!= nullptr){
-        audio->duration = static_cast<int>(avformatContext->duration / 1000000);
+        audio->duration = static_cast<int>(avFormatContext->duration / 1000000);
         audio->in_sample_rate = audio->avCodecContext->sample_rate;
-        audio->sample_rate = audio->avCodecContext->sample_rate;
         if(video!= nullptr){
             audio->hasVideo = true;
         }
@@ -118,7 +118,7 @@ void HFFmpeg::decodeFFmpeg() {
             ,video->avCodecContext->extradata_size,video->avCodecContext->extradata_size
             ,video->avCodecContext->extradata,video->avCodecContext->extradata);
         }
-        video->duration = static_cast<int>(avformatContext->duration / 1000000);
+        video->duration = static_cast<int>(avFormatContext->duration / 1000000);
     }
     callJava->onPrepared(H_THREAD_CHILD);
 
@@ -156,22 +156,36 @@ int HFFmpeg::getDecodeContext(AVCodecParameters *codecParameters,HBaseAV *av) {
     return 0;
 }
 
+/**
+ * 播放的时候是生产/消费者模式的集中体现
+ * 多线程操作队列（从队列中取出播放和入队分别在不同的线程中进行）
+ * */
 void HFFmpeg::startPlay() {
-    if(audio!= nullptr)audio->playAudio();
     int count = 0;
+    if(audio!= nullptr)audio->playAudio();
+    if(video!= nullptr){
+        if(mimeType==-1){
+            video->playVideo(0);
+        }else{
+            video->playVideo(1);
+        }
+    }
     while(!status->exit){
         if(audio!= nullptr && audio->queue->getPacketQueueSize()>100){
             av_usleep(1000*100);
             continue;
         }
         AVPacket *packet = av_packet_alloc();
-        //这步很关键，得把frame的信息存到packet中再放入队列中
-        int result = av_read_frame(avformatContext,packet);
+        ///这步很关键，得把frame的信息存到packet中再放入队列中
+        int result = av_read_frame(avFormatContext,packet);
         if(result==0){
+            //stream_index=streamIndex=循环取流中该流所处的索引位置也是channel的channelId
             if(audio!=nullptr && packet->stream_index==audio->streamIndex){
                 count++;
 //                LOGD("放入第%d个Packet进队列",count);
                 audio->queue->putPacket(packet);
+            }else if(video!= nullptr && packet->stream_index==video->streamIndex){
+                video->queue->putPacket(packet);
             }else{
                 av_packet_free(&packet);
                 av_free(packet);
@@ -206,7 +220,7 @@ void HFFmpeg::setVideoChannel(int index) {
         HChannel *videoChannel = videoChannels.at(static_cast<unsigned int>(index));
         video->streamIndex = videoChannel ->channelId;
         video->time_base = videoChannel->time_base;
-        video->rate = 1000/videoChannel->fps;//?一帧花费多少秒
+        video->rate = 1000/videoChannel->fps;//?一帧花费多少秒,这应该是一秒多少帧吧
         video->frameRateBig = videoChannel->fps >= 60;
     }
 }

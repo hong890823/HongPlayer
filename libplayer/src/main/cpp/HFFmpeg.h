@@ -26,7 +26,7 @@ public:
 
     pthread_t decodeThread;
     pthread_mutex_t initMutex;
-    AVFormatContext *avformatContext;
+    AVFormatContext *avFormatContext;
 
     HCallJava *callJava = NULL;
     HAudio *audio = NULL;

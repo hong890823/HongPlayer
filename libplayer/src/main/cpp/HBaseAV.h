@@ -16,7 +16,8 @@ public:
     int streamIndex;
     AVRational time_base;
     int duration;
+    double clock = 0;
+    double now_time = 0;
 };
-
 
 #endif //HONGPLAYER_HBASEAV_H

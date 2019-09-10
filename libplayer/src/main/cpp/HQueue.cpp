@@ -6,10 +6,10 @@
 
 HQueue::HQueue(HStatus *status) {
     this->status = status;
-    pthread_mutex_init(&mutexPacket,NULL);
-    pthread_mutex_init(&mutexFrame,NULL);
-    pthread_cond_init(&condPacket,NULL);
-    pthread_cond_init(&condFrame,NULL);
+    pthread_mutex_init(&mutexPacket, nullptr);
+    pthread_mutex_init(&mutexFrame,nullptr);
+    pthread_cond_init(&condPacket,nullptr);
+    pthread_cond_init(&condFrame,nullptr);
 }
 
 HQueue::~HQueue() {
@@ -35,7 +35,11 @@ void HQueue::putPacket(AVPacket *packet) {
     if(status!= nullptr && !status->exit){
         if(!queuePacket.empty()){
             AVPacket *avPacket = queuePacket.front();
-            //把从队列头部拿出的AVPacket信息拷贝给参数AVPacket
+            /*把从队列头部拿出的AVPacket信息拷贝给参数AVPacket
+             * (经过测试直接拿队列头部的AVPacket传递出去也可以，
+             * 但是很可能需要面临内存释放的问题，因为传递出去的
+             * AVPacket没有办法在这里释放占用的内存哦
+             * */
             if(av_packet_ref(packet,avPacket)==0){
                 queuePacket.pop();
             }
@@ -48,6 +52,34 @@ void HQueue::putPacket(AVPacket *packet) {
         }
     }
     pthread_mutex_unlock(&mutexPacket);
+    return 0;
+}
+
+void HQueue::putFrame(AVFrame *frame) {
+    pthread_mutex_lock(&mutexFrame);
+    queueFrame.push(frame);
+    pthread_cond_signal(&condFrame);
+    pthread_mutex_unlock(&mutexFrame);
+}
+
+int HQueue::getFrame(AVFrame *frame) {
+    pthread_mutex_lock(&mutexFrame);
+    while(status!= nullptr && !status->exit){
+        if(!queueFrame.empty()){
+            AVFrame *avFrame = queueFrame.front();
+            if(av_frame_ref(frame,avFrame)==0){
+                queueFrame.pop();
+            }
+            av_frame_free(&avFrame);
+            av_free(avFrame);
+            avFrame = nullptr;
+            break;
+        }else{
+            if(status!= nullptr && !status->exit)
+                pthread_cond_wait(&condFrame,&mutexFrame);
+        }
+    }
+    pthread_mutex_unlock(&mutexFrame);
     return 0;
 }
 
@@ -81,4 +113,5 @@ int HQueue::clearPacketQueue() {
 int HQueue::clearFrameQueue() {
     return 0;
 }
+
 
