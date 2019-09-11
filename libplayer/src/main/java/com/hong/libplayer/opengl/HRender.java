@@ -5,11 +5,13 @@ import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.util.Log;
 import android.view.Surface;
 
 import com.hong.libplayer.R;
 import com.hong.libplayer.listener.HOnGlSurfaceViewCreateListener;
 import com.hong.libplayer.listener.HOnRenderRefreshListener;
+import com.hong.libplayer.util.LogUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -111,6 +113,9 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         GLES20.glViewport(0, 0, width, height);
     }
 
+    /**
+     * glSurfaceView的requestRender会调用到此方法
+     * */
     @Override
     public void onDrawFrame(GL10 gl) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
@@ -125,9 +130,13 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
     }
 
-    //硬解刷新界面的方法。SurfaceTexture有数据就会调动这个方法，surfacetexture绑定的surface给了mediacodec.
+    /**
+     * 硬解刷新界面的方法。
+     * surfaceTexture有数据就会调动这个方法，surfaceTexture绑定的surface给了mediaCodec.
+     */
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+        LogUtil.logD("硬解码调用onFrameAvailable方法成功");
         if(onRenderRefreshListener != null) {
             onRenderRefreshListener.onRefresh();
         }
@@ -227,6 +236,7 @@ public class HRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAv
         surfaceTexture.setOnFrameAvailableListener(this);
 
         if(onGlSurfaceViewCreateListener != null){
+            LogUtil.logD("Render中surface初始化完成,传递给Player类");
             onGlSurfaceViewCreateListener.onGlSurfaceViewCreate(surface);
         }
     }

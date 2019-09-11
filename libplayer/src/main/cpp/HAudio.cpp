@@ -42,7 +42,10 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf caller, void *pContext) {
     audio->out_buffer_point = nullptr;
     audio->pcm_data_size = audio->getPcmData(&audio->out_buffer_point);
     if(audio->out_buffer_point && audio->pcm_data_size>0){
-        audio->clock
+        ///计算音频播放的时钟（每帧的pcmSize除以每秒的pcmSize得到clock为这一帧播放需要的秒数，应该是小于1秒的）
+        audio->clock+=audio->pcm_data_size/(audio->out_sample_rate*2*2);
+        //todo 通过clock和duration更新音频播放的进度
+
         (*audio->pcmBufferQueue)->Enqueue(audio->pcmBufferQueue, audio->out_buffer_point,
                                           static_cast<SLuint32>(audio->pcm_data_size));
     }

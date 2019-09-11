@@ -3,6 +3,7 @@ package com.hongplayer.activity;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
+import android.view.WindowManager;
 
 import com.hong.libplayer.listener.HOnErrorListener;
 import com.hong.libplayer.listener.HOnPreparedListener;
@@ -15,7 +16,7 @@ import butterknife.BindView;
 
 public class VideoLiveActivity extends BaseActivity implements HOnPreparedListener, HOnErrorListener {
 
-    @BindView(R.id.video_surface_view)
+//    @BindView(R.id.video_surface_view)
     HGLSurfaceView surfaceView;
 
     /**
@@ -31,8 +32,13 @@ public class VideoLiveActivity extends BaseActivity implements HOnPreparedListen
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_video_live);
-        liveUrl = (String) getIntent().getExtras().get("url");
+        surfaceView = findViewById(R.id.video_surface_view);
+//        liveUrl = (String) getIntent().getExtras().get("url");
+        liveUrl = "http://baobab.kaiyanapp.com/api/v1/playUrl?vid=172434&resourceType=video&editionType=default&source=aliyun&playUrlType=url_oss";
         liveUrl = deleteHttps(liveUrl);
         player = new HPlayer();
         player.setOnPreparedListener(this);

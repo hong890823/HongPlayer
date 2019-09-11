@@ -33,6 +33,9 @@ public:
     int getFrameQueueSize();
     int clearPacketQueue();
     int clearFrameQueue();
+
+    int clearToKeyPacket();
+    int noticeThread();
 };
 
 

@@ -12,6 +12,7 @@ import com.hong.libplayer.listener.HOnPreparedListener;
 import com.hong.libplayer.listener.HCommonCode;
 import com.hong.libplayer.opengl.HGLSurfaceView;
 import com.hong.libplayer.opengl.HRender;
+import com.hong.libplayer.util.LogUtil;
 
 import java.nio.ByteBuffer;
 
@@ -32,7 +33,14 @@ public class HPlayer {
     private String dataSource;
     private HGLSurfaceView hglSurfaceView;
     private Surface surface;
+    /**
+     * 视频硬件编解码器
+     */
     private MediaCodec mediaCodec;
+    /**
+     * 视频解码器的BufferInfo
+     */
+    private MediaCodec.BufferInfo mediaBufferInfo = new MediaCodec.BufferInfo();
 
     private HOnPreparedListener onPreparedListener;
     private HOnErrorListener onErrorListener;
@@ -57,8 +65,9 @@ public class HPlayer {
         //接口的实现在这里，接口的调用以及参数的赋值在HRender中的initRenderMediaCodec中
         hglSurfaceView.setOnGlSurfaceViewCreateListener(new HOnGlSurfaceViewCreateListener() {
             @Override
-            public void onGlSurfaceViewCreate(Surface surface) {
-                HPlayer.this.surface = surface;
+            public void onGlSurfaceViewCreate(Surface s) {
+                if(s!=null) LogUtil.logD("Player类接收到有效的surface对象");
+                if(surface==null)surface = s;
             }
 
             @Override
@@ -69,10 +78,12 @@ public class HPlayer {
     }
 
     public void prepare(){
+        LogUtil.logD("Player类准备播放");
         native_prepare(dataSource,false);
     }
 
     public void start() {
+        LogUtil.logD("Player类开始播放");
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -128,18 +139,51 @@ public class HPlayer {
                 mediaFormat.setLong(MediaFormat.KEY_MAX_INPUT_SIZE,width*height);
                 mediaFormat.setByteBuffer("csd-0", ByteBuffer.wrap(csd0));
                 mediaFormat.setByteBuffer("csd-1",ByteBuffer.wrap(csd1));
-                Log.d("HongPlayer",mediaFormat.toString());
+                LogUtil.logD(mediaFormat.toString());
                 mediaCodec = MediaCodec.createDecoderByType(mType);
                 if(surface!=null){
+                    LogUtil.logD("硬件解码初始化与surface绑定成功");
                     mediaCodec.configure(mediaFormat,surface,null,0);
                     mediaCodec.start();
                 }
             }catch(Exception e){
-                e.printStackTrace();
+                LogUtil.logE("硬解码初始化失败"+e.toString());
             }
         }else{
             if(onErrorListener!=null)onErrorListener.onError(HCommonCode.H_STATUS_SURFACE_NULL,"surface is null");
         }
+    }
+
+    public void decodeMediaCodec(byte[] bytes,int size,int pts){
+        if(bytes!=null && mediaCodec!=null && mediaBufferInfo!=null){
+            LogUtil.logE("bytes"+bytes.length+"--size"+size+"--pts"+pts);
+            try{
+                int inputBufferIndex = mediaCodec.dequeueInputBuffer(10);
+                if(inputBufferIndex >= 0){
+                    ByteBuffer byteBuffer;
+//                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+//                        byteBuffer = mediaCodec.getInputBuffer(inputBufferIndex);
+//                    }else{
+                        byteBuffer = mediaCodec.getInputBuffers()[inputBufferIndex];
+//                    }
+                    byteBuffer.clear();
+                    byteBuffer.put(bytes);
+                    mediaCodec.queueInputBuffer(inputBufferIndex,0,size,pts,0);
+                }
+                int outputBufferIndex = mediaCodec.dequeueOutputBuffer(mediaBufferInfo,10);
+                while(outputBufferIndex >= 0){
+                    mediaCodec.releaseOutputBuffer(outputBufferIndex,true);
+                    outputBufferIndex = mediaCodec.dequeueOutputBuffer(mediaBufferInfo,10);
+                }
+            }catch(Exception e){
+                LogUtil.logE("硬解码失败"+e.toString());
+            }
+        }
+    }
+
+    public void onVideoInfo(int currentTime,int totalTime){
+
+
     }
 
     private String getMimeType(int type) {

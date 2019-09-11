@@ -114,4 +114,28 @@ int HQueue::clearFrameQueue() {
     return 0;
 }
 
+int HQueue::clearToKeyPacket() {
+    pthread_cond_signal(&condPacket);
+    pthread_mutex_lock(&mutexPacket);
+    while (!queuePacket.empty()){
+        AVPacket *avPacket = queuePacket.front();
+        if(avPacket->flags!=AV_PKT_FLAG_KEY){
+            queuePacket.pop();
+            av_free(avPacket->data);
+            av_free(avPacket->buf);
+            av_free(avPacket->side_data);
+        }else{
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutexPacket);
+    return 0;
+}
+
+int HQueue::noticeThread() {
+    pthread_cond_signal(&condFrame);
+    pthread_cond_signal(&condPacket);
+    return 0;
+}
+
 

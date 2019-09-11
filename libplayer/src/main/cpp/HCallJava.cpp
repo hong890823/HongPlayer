@@ -17,6 +17,8 @@ HCallJava::HCallJava(JavaVM *vm,JNIEnv *env,jobject obj) {
     jmid_onlySoft = jniEnv->GetMethodID(jcl, "isOnlySoft", "()Z");
     jmid_onlyMusic = jniEnv->GetMethodID(jcl,"isOnlyMusic","()Z");
     jmid_init_mdeiaCodec = jniEnv->GetMethodID(jcl,"initMediaCodec","(III[B[B)V");
+    jmid_video_info = jniEnv->GetMethodID(jcl,"onVideoInfo","(II)V");
+    jmid_dec_mediaCodec = jniEnv->GetMethodID(jcl,"decodeMediaCodec","([BII)V");
 }
 
 HCallJava::~HCallJava() {
@@ -71,23 +73,56 @@ void HCallJava::onInitMediaCodec(int type, int mimeType, int width, int height, 
         JNIEnv *jniEnv;
         javaVM->AttachCurrentThread(&jniEnv,0);
         jbyteArray csd0 = jniEnv->NewByteArray(csd_0_size);
-        jniEnv->SetByteArrayRegion(csd0, 0, csd_0_size, reinterpret_cast<const jbyte *>(csd0));
+        jniEnv->SetByteArrayRegion(csd0, 0, csd_0_size, reinterpret_cast<const jbyte *>(csd_0));
         jbyteArray csd1 = jniEnv->NewByteArray(csd_1_size);
-        jniEnv->SetByteArrayRegion(csd1, 0, csd_1_size, reinterpret_cast<const jbyte *>(csd1));
+        jniEnv->SetByteArrayRegion(csd1, 0, csd_1_size, reinterpret_cast<const jbyte *>(csd_1));
         jniEnv->CallVoidMethod(jobj,jmid_init_mdeiaCodec,mimeType,width,height,csd0,csd1);
         jniEnv->DeleteLocalRef(csd0);
         jniEnv->DeleteLocalRef(csd1);
         javaVM->DetachCurrentThread();
     }else{
         jbyteArray csd0 = jniEnv->NewByteArray(csd_0_size);
-        jniEnv->SetByteArrayRegion(csd0, 0, csd_0_size, reinterpret_cast<const jbyte *>(csd0));
+        jniEnv->SetByteArrayRegion(csd0, 0, csd_0_size, reinterpret_cast<const jbyte *>(csd_0));
         jbyteArray csd1 = jniEnv->NewByteArray(csd_1_size);
-        jniEnv->SetByteArrayRegion(csd1, 0, csd_1_size, reinterpret_cast<const jbyte *>(csd1));
+        jniEnv->SetByteArrayRegion(csd1, 0, csd_1_size, reinterpret_cast<const jbyte *>(csd_1));
         jniEnv->CallVoidMethod(jobj,jmid_init_mdeiaCodec,mimeType,width,height,csd0,csd1);
         jniEnv->DeleteLocalRef(csd0);
         jniEnv->DeleteLocalRef(csd1);
     }
 }
+
+/**
+ * 调用硬解码方法解析视频
+ * */
+void HCallJava::onDecMediaCodec(int type, int size, uint8_t *packet_data, int pts) {
+    if(H_THREAD_CHILD==type){
+        JNIEnv *jniEnv;
+        javaVM->AttachCurrentThread(&jniEnv,0);
+        jbyteArray data = jniEnv->NewByteArray(size);
+        jniEnv->SetByteArrayRegion(data, 0, size, reinterpret_cast<const jbyte *>(packet_data));
+        jniEnv->CallVoidMethod(jobj,jmid_dec_mediaCodec,data,size,pts);
+        jniEnv->DeleteLocalRef(data);
+        javaVM->DetachCurrentThread();
+    }else{
+        jbyteArray data = jniEnv->NewByteArray(size);
+        jniEnv->SetByteArrayRegion(data, 0, size, reinterpret_cast<const jbyte *>(packet_data));
+        jniEnv->CallVoidMethod(jobj,jmid_dec_mediaCodec,data,size,pts);
+        jniEnv->DeleteLocalRef(data);
+    }
+}
+
+void HCallJava::onVideoInfo(int type, int currentTime, int total) {
+    if(H_THREAD_CHILD==type){
+        JNIEnv *jniEnv;
+        javaVM->AttachCurrentThread(&jniEnv,0);
+        jniEnv->CallVoidMethod(jobj,jmid_video_info,currentTime,total);
+        javaVM->DetachCurrentThread();
+    }else{
+        jniEnv->CallVoidMethod(jobj,jmid_video_info,currentTime,total);
+    }
+}
+
+
 
 
 

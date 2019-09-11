@@ -9,6 +9,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.hongplayer.R;
@@ -141,7 +142,7 @@ public class VideoFragment extends BaseFragment{
 
             @Override
             public void onError(int code, String msg) {
-
+                Toast.makeText(getContext(), "msg", Toast.LENGTH_SHORT).show();
             }
         },getActivity()));
     }

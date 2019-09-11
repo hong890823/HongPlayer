@@ -14,6 +14,8 @@ class HCallJava {
     jmethodID jmid_onlySoft;
     jmethodID jmid_onlyMusic;
     jmethodID jmid_init_mdeiaCodec;
+    jmethodID jmid_video_info;
+    jmethodID jmid_dec_mediaCodec;
 public:
     JavaVM *javaVM;
     JNIEnv *jniEnv;
@@ -25,6 +27,8 @@ public:
     void onError(int type,int errorCode,char *errorMsg);
     bool isOnlySoft(int type);
     void onInitMediaCodec(int type, int mimeType, int width, int height, int csd_0_size, int csd_1_size, uint8_t *csd_0, uint8_t *csd_1);
+    void onDecMediaCodec(int type,int size,uint8_t *packet_data, int pts);
+    void onVideoInfo(int type,int currentTime,int totalTime);
 };
 
 
