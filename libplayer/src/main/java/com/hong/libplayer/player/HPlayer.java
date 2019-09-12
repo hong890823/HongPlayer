@@ -88,6 +88,7 @@ public class HPlayer {
             @Override
             public void run() {
                 native_start();
+
             }
         }).start();
     }
@@ -158,25 +159,24 @@ public class HPlayer {
         if(bytes!=null && mediaCodec!=null && mediaBufferInfo!=null){
             LogUtil.logE("bytes"+bytes.length+"--size"+size+"--pts"+pts);
             try{
+                LogUtil.logE("硬解码");
                 int inputBufferIndex = mediaCodec.dequeueInputBuffer(10);
+//                LogUtil.logE("硬解码值"+inputBufferIndex);
                 if(inputBufferIndex >= 0){
-                    ByteBuffer byteBuffer;
-//                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-//                        byteBuffer = mediaCodec.getInputBuffer(inputBufferIndex);
-//                    }else{
-                        byteBuffer = mediaCodec.getInputBuffers()[inputBufferIndex];
-//                    }
+                    ByteBuffer byteBuffer = mediaCodec.getInputBuffers()[inputBufferIndex];
                     byteBuffer.clear();
                     byteBuffer.put(bytes);
                     mediaCodec.queueInputBuffer(inputBufferIndex,0,size,pts,0);
                 }
+
                 int outputBufferIndex = mediaCodec.dequeueOutputBuffer(mediaBufferInfo,10);
+                LogUtil.logE("硬解码值---"+outputBufferIndex);
                 while(outputBufferIndex >= 0){
                     mediaCodec.releaseOutputBuffer(outputBufferIndex,true);
                     outputBufferIndex = mediaCodec.dequeueOutputBuffer(mediaBufferInfo,10);
                 }
             }catch(Exception e){
-                LogUtil.logE("硬解码失败"+e.toString());
+                LogUtil.logE("硬解码失败"+e.getMessage());
             }
         }
     }

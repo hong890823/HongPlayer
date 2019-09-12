@@ -37,7 +37,7 @@ void HAudio::playAudio() {
 
 //线程方法回调
 void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf caller, void *pContext) {
-    LOGD("音频播放准备完毕，开始回调数据");
+//    LOGD("音频播放准备完毕，开始回调数据");
     auto *audio = static_cast<HAudio *>(pContext);
     audio->out_buffer_point = nullptr;
     audio->pcm_data_size = audio->getPcmData(&audio->out_buffer_point);
@@ -115,7 +115,7 @@ void HAudio::initOpenSL() {
  * 所以从packet队列中拿出数据转成frame再播放就可以了
  * */
 int HAudio::getPcmData(void **out_buffer_point) {
-    LOGD("开始读取音频数据");
+//    LOGD("开始读取音频数据");
     int count = 0;
     while(!status->exit){
         int result;
@@ -133,7 +133,7 @@ int HAudio::getPcmData(void **out_buffer_point) {
                 continue;
             }
             count++;
-            LOGE("从队列中取出第%d个Packet",count);
+//            LOGE("从队列中取出第%d个Packet",count);
             ///把packet放到解码器中
             result = avcodec_send_packet(avCodecContext,packet);
             if(result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF){

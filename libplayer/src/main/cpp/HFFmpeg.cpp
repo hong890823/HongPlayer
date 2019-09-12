@@ -31,6 +31,7 @@ void HFFmpeg::prepareFFmpeg() {
  * */
 void HFFmpeg::decodeFFmpeg() {
     pthread_mutex_init(&initMutex,nullptr);
+    isAvi = false;
     av_register_all();
     avformat_network_init();
     avFormatContext = avformat_alloc_context();
@@ -169,8 +170,32 @@ void HFFmpeg::startPlay() {
             video->playVideo(1);
         }
     }
+
+    AVBitStreamFilterContext* mimType = NULL;
+    if(mimeType == 1)
+    {
+        mimType =  av_bitstream_filter_init("h264_mp4toannexb");
+    }
+    else if(mimeType == 2)
+    {
+        mimType =  av_bitstream_filter_init("hevc_mp4toannexb");
+    }
+    else if(mimeType == 3)
+    {
+        mimType =  av_bitstream_filter_init("h264_mp4toannexb");
+    }
+    else if(mimeType == 4)
+    {
+        mimType =  av_bitstream_filter_init("h264_mp4toannexb");
+    }
+
+    LOGE("mimType是%d",mimType);
     while(!status->exit){
         if(audio!= nullptr && audio->queue->getPacketQueueSize()>100){
+            av_usleep(1000*100);
+            continue;
+        }
+        if(video!= nullptr && video->queue->getPacketQueueSize()>100){
             av_usleep(1000*100);
             continue;
         }
@@ -184,6 +209,18 @@ void HFFmpeg::startPlay() {
 //                LOGD("放入第%d个Packet进队列",count);
                 audio->queue->putPacket(packet);
             }else if(video!= nullptr && packet->stream_index==video->streamIndex){
+                if(mimType != NULL && !isAvi)
+                {
+//                    uint8_t *data;
+//                    av_bitstream_filter_filter(mimType, avFormatContext->streams[video->streamIndex]->codec, NULL, &data, &packet->size, packet->data, packet->size, 0);
+//                    uint8_t *tdata = NULL;
+//                    tdata = packet->data;
+//                    packet->data = data;
+//                    if(tdata != NULL)
+//                    {
+//                        av_free(tdata);
+//                    }
+                }
                 video->queue->putPacket(packet);
             }else{
                 av_packet_free(&packet);
@@ -195,6 +232,10 @@ void HFFmpeg::startPlay() {
             av_free(packet);
             packet = nullptr;
         }
+//        if(mimType != NULL)
+//        {
+//            av_bitstream_filter_close(mimType);
+//        }
     }
 
 }
@@ -232,9 +273,11 @@ int HFFmpeg::getMimeType(const char* codecName){
         return H_MIMETYPE_HEVC;
     }
     if(strcmp(codecName,"mpeg4")==0){
+        isAvi = true;
         return H_MIMETYPE_MPEG4;
     }
     if(strcmp(codecName,"wmv3")==0){
+        isAvi = true;
         return H_MIMETYPE_WMV3;
     }
     return -1;

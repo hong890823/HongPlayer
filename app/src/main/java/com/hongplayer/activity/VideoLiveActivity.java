@@ -1,6 +1,9 @@
 package com.hongplayer.activity;
 
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
+import android.os.MessageQueue;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.view.WindowManager;
@@ -46,7 +49,6 @@ public class VideoLiveActivity extends BaseActivity implements HOnPreparedListen
         player.setDataSource(liveUrl);
         player.setHglSurfaceView(surfaceView);
         player.prepare();
-
     }
 
     /**

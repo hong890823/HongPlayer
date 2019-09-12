@@ -2,8 +2,8 @@
 #include "HFFmpeg.h"
 #include "HCallJava.h"
 
-JavaVM *javaVM = NULL;
-HFFmpeg *hFFmpeg = NULL;
+JavaVM *javaVM = nullptr;
+HFFmpeg *hFFmpeg = nullptr;
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -11,7 +11,7 @@ Java_com_hong_libplayer_player_HPlayer_native_1prepare(JNIEnv *env, jobject inst
                                                        jboolean isOnlyMusic) {
     jboolean *isCopy = JNI_FALSE;
     const char *url = env->GetStringUTFChars(url_,isCopy);
-    HCallJava *callJava = new HCallJava(javaVM, env, instance);
+    auto *callJava = new HCallJava(javaVM, env, instance);
     hFFmpeg = new HFFmpeg(callJava,url);
     hFFmpeg->prepareFFmpeg();
 }
@@ -31,5 +31,5 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm,void *reserved){
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_hong_libplayer_player_HPlayer_native_1start(JNIEnv *env, jobject instance) {
-    hFFmpeg->startPlay();
+    if(hFFmpeg!= nullptr)hFFmpeg->startPlay();
 }

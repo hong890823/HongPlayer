@@ -33,6 +33,7 @@ public:
     HVideo *video = NULL;
     HStatus *status = NULL;
 
+    bool isAvi = false;
     bool isOnlyMusic = false;
     bool exit = false;
     int mimeType = 1;
