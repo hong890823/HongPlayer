@@ -211,15 +211,15 @@ void HFFmpeg::startPlay() {
             }else if(video!= nullptr && packet->stream_index==video->streamIndex){
                 if(mimType != NULL && !isAvi)
                 {
-//                    uint8_t *data;
-//                    av_bitstream_filter_filter(mimType, avFormatContext->streams[video->streamIndex]->codec, NULL, &data, &packet->size, packet->data, packet->size, 0);
-//                    uint8_t *tdata = NULL;
-//                    tdata = packet->data;
-//                    packet->data = data;
-//                    if(tdata != NULL)
-//                    {
-//                        av_free(tdata);
-//                    }
+                    uint8_t *data;
+                    av_bitstream_filter_filter(mimType, avFormatContext->streams[video->streamIndex]->codec, NULL, &data, &packet->size, packet->data, packet->size, 0);
+                    uint8_t *tdata = NULL;
+                    tdata = packet->data;
+                    packet->data = data;
+                    if(tdata != NULL)
+                    {
+                        av_free(tdata);
+                    }
                 }
                 video->queue->putPacket(packet);
             }else{
@@ -232,11 +232,10 @@ void HFFmpeg::startPlay() {
             av_free(packet);
             packet = nullptr;
         }
-//        if(mimType != NULL)
-//        {
-//            av_bitstream_filter_close(mimType);
-//        }
     }
+    if(mimType != NULL) {
+            av_bitstream_filter_close(mimType);
+        }
 
 }
 
