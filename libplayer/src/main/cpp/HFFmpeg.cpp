@@ -25,6 +25,23 @@ void HFFmpeg::prepareFFmpeg() {
     pthread_create(&decodeThread,NULL,decode,this);
 }
 
+int avformat_interrupt_cb(void *ctx)
+{
+    auto *wlFFmpeg = (HFFmpeg *) ctx;
+    if(wlFFmpeg->status->exit)
+    {
+        if(LOG_SHOW)
+        {
+            LOGE("avformat_interrupt_cb return 1")
+        }
+        return AVERROR_EOF;
+    }
+    if(LOG_SHOW)
+    {
+        LOGE("avformat_interrupt_cb return 0")
+    }
+    return 0;
+}
 /**
  * 准备FFmpeg的相关信息
  * 从注册开始一直到获取到解码的上下文结束
@@ -48,6 +65,10 @@ void HFFmpeg::decodeFFmpeg() {
         callError(H_ERROR_CODE,const_cast<char *>("open input url error:%s",url));
         pthread_mutex_unlock(&initMutex);
     }
+
+    avFormatContext->interrupt_callback.callback = avformat_interrupt_cb;
+    avFormatContext->interrupt_callback.opaque = this;
+
     if(avformat_find_stream_info(avFormatContext,nullptr)<0){
         if(LOG_SHOW)LOGE("find stream info error");
         callError(H_ERROR_CODE,const_cast<char *>("find stream info error"));
@@ -79,7 +100,7 @@ void HFFmpeg::decodeFFmpeg() {
         audio = new HAudio(status,callJava);
         setAudioChannel(0);
         if(audio->streamIndex>=0 && audio->streamIndex<avFormatContext->nb_streams){
-            if(getDecodeContext(avFormatContext->streams[audio->streamIndex]->codecpar,audio)){
+            if(getDecodeContext(avFormatContext->streams[audio->streamIndex]->codecpar,audio)!=0){
                 callError(H_ERROR_CODE, const_cast<char *>("getDecodeContext audio error"));
                 pthread_mutex_unlock(&initMutex);
             }
@@ -89,7 +110,7 @@ void HFFmpeg::decodeFFmpeg() {
         video = new HVideo(status,callJava,audio);
         setVideoChannel(0);
         if(video->streamIndex>=0 && video->streamIndex<avFormatContext->nb_streams){
-            if(getDecodeContext(avFormatContext->streams[video->streamIndex]->codecpar,video)){
+            if(getDecodeContext(avFormatContext->streams[video->streamIndex]->codecpar,video)!=0){
                 callError(H_ERROR_CODE, const_cast<char *>("getDecodeContext video error"));
                 pthread_mutex_unlock(&initMutex);
             }
@@ -205,7 +226,7 @@ void HFFmpeg::startPlay() {
         if(result==0){
             //stream_index=streamIndex=循环取流中该流所处的索引位置也是channel的channelId
             if(audio!=nullptr && packet->stream_index==audio->streamIndex){
-                count++;
+//                count++;
 //                LOGD("放入第%d个Packet进队列",count);
                 audio->queue->putPacket(packet);
             }else if(video!= nullptr && packet->stream_index==video->streamIndex){
@@ -221,6 +242,8 @@ void HFFmpeg::startPlay() {
                         av_free(tdata);
                     }
                 }
+                count++;
+//                LOGE("视频第%d个packet进入",count);
                 video->queue->putPacket(packet);
             }else{
                 av_packet_free(&packet);
@@ -231,6 +254,11 @@ void HFFmpeg::startPlay() {
             av_packet_free(&packet);
             av_free(packet);
             packet = nullptr;
+            if((video != NULL && video->queue->getFrameQueueSize() == 0) || (audio != NULL && audio->queue->getPacketQueueSize() == 0))
+            {
+                status->exit = true;
+                break;
+            }
         }
     }
     if(mimType != NULL) {

@@ -32,7 +32,7 @@ void HQueue::putPacket(AVPacket *packet) {
  int HQueue::getPacket(AVPacket *packet) {
     pthread_mutex_lock(&mutexPacket);
 //    while(status!= nullptr && !status->exit){
-    if(status!= nullptr && !status->exit){
+    while(status!= nullptr && !status->exit){
         if(!queuePacket.empty()){
             AVPacket *avPacket = queuePacket.front();
             /*把从队列头部拿出的AVPacket信息拷贝给参数AVPacket
@@ -46,7 +46,7 @@ void HQueue::putPacket(AVPacket *packet) {
             av_packet_free(&avPacket);
             av_free(avPacket);
             avPacket = nullptr;
-//            break;
+            break;
         }else{
             if(!status->exit)pthread_cond_wait(&condPacket,&mutexPacket);
         }
@@ -92,7 +92,11 @@ int HQueue::getPacketQueueSize() {
 }
 
 int HQueue::getFrameQueueSize() {
-    return 0;
+    int size = 0;
+    pthread_mutex_lock(&mutexFrame);
+    size = queueFrame.size();
+    pthread_mutex_unlock(&mutexFrame);
+    return size;
 }
 
 int HQueue::clearPacketQueue() {
