@@ -231,6 +231,11 @@ void HFFmpeg::startPlay() {
             av_packet_free(&packet);
             av_free(packet);
             packet = nullptr;
+            if((video != NULL && video->queue->getFrameQueueSize() == 0) || (audio != NULL && audio->queue->getPacketQueueSize() == 0))
+            {
+//                wlPlayStatus->exit = true;
+                break;
+            }
         }
     }
     if(mimType != NULL) {
