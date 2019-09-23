@@ -43,7 +43,7 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf caller, void *pContext) {
     audio->pcm_data_size = audio->getPcmData(&audio->out_buffer_point);
     if(audio->out_buffer_point && audio->pcm_data_size>0){
         ///计算音频播放的时钟（每帧的pcmSize除以每秒的pcmSize得到clock为这一帧播放需要的秒数，应该是小于1秒的）
-        audio->clock+=audio->pcm_data_size/(audio->out_sample_rate*2*2);
+        audio->clock+=audio->pcm_data_size/(double)(audio->out_sample_rate*2*2);
         //todo 通过clock和duration更新音频播放的进度
 
         (*audio->pcmBufferQueue)->Enqueue(audio->pcmBufferQueue, audio->out_buffer_point,
@@ -190,6 +190,11 @@ int HAudio::getPcmData(void **out_buffer_point) {
             int out_channels = av_get_channel_layout_nb_channels(static_cast<uint64_t>(out_ch_layout));
             /// 每帧采样个数*量化位数占用字节*声道数
             pcm_data_size = out_nb_samples*av_get_bytes_per_sample(out_sample_format)*out_channels;
+
+            now_time = frame->pts * av_q2d(time_base);
+            if(now_time<clock)now_time = clock;
+            clock = now_time;
+
             //已经正确的获取了该frame的pcm数据，可以退出循环了
             freeAVPacket(packet);
             freeAVFrame(frame);

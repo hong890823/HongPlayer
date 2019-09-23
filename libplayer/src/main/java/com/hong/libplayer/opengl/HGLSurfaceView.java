@@ -51,8 +51,4 @@ public class HGLSurfaceView extends GLSurfaceView{
         }
     }
 
-    public HRender getRender() {
-        return render;
-    }
-
 }

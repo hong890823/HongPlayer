@@ -157,11 +157,8 @@ public class HPlayer {
 
     public void decodeMediaCodec(byte[] bytes,int size,int pts){
         if(bytes!=null && mediaCodec!=null && mediaBufferInfo!=null){
-            LogUtil.logE("bytes"+bytes.length+"--size"+size+"--pts"+pts);
             try{
-                LogUtil.logE("硬解码");
                 int inputBufferIndex = mediaCodec.dequeueInputBuffer(10);
-//                LogUtil.logE("硬解码值"+inputBufferIndex);
                 if(inputBufferIndex >= 0){
                     ByteBuffer byteBuffer = mediaCodec.getInputBuffers()[inputBufferIndex];
                     byteBuffer.clear();
@@ -170,7 +167,7 @@ public class HPlayer {
                 }
 
                 int outputBufferIndex = mediaCodec.dequeueOutputBuffer(mediaBufferInfo,10);
-                LogUtil.logE("硬解码值---"+outputBufferIndex);
+//                LogUtil.logE("硬解码值---"+outputBufferIndex);
                 while(outputBufferIndex >= 0){
                     mediaCodec.releaseOutputBuffer(outputBufferIndex,true);
                     outputBufferIndex = mediaCodec.dequeueOutputBuffer(mediaBufferInfo,10);
@@ -182,8 +179,7 @@ public class HPlayer {
     }
 
     public void onVideoInfo(int currentTime,int totalTime){
-
-
+//        LogUtil.logD("currentTime--"+currentTime+"totalTime--"+totalTime);
     }
 
     private String getMimeType(int type) {

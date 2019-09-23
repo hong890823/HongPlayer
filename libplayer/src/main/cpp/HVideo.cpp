@@ -65,6 +65,7 @@ void HVideo::decodeVideo() {
         ///硬解操作的是AVPacket
         if(codecType==1){
             AVPacket *packet = av_packet_alloc();
+//            LOGE("视频第%d个packet取出---",playCount);
             if(queue->getPacket(packet)!=0){
                 av_free(packet->data);
                 av_free(packet->buf);
@@ -82,7 +83,7 @@ void HVideo::decodeVideo() {
             if(audio!= nullptr)diff = audio->clock-clock;
             playCount++;
             if(playCount>500)playCount = 0;
-            if(diff>=0.5){
+            if(diff>=0.5){//如果视频比音频慢
                 if(frameRateBig){
                     if(playCount%3==0 && packet->flags!=AV_PKT_FLAG_KEY){
                         av_free(packet->data);
@@ -98,7 +99,8 @@ void HVideo::decodeVideo() {
                 }
             }
             delayTime = getDelayTime(diff);
-            av_usleep(static_cast<unsigned int>(delayTime * 1000));
+            av_usleep(delayTime*1000);
+//            LOGE("硬解视频队列中还有%d帧数据",queue->getPacketQueueSize());
             //todo 视频播放进度以及硬解码开始
             callJava->onVideoInfo(H_THREAD_CHILD, static_cast<int>(clock), duration);
             callJava->onDecMediaCodec(H_THREAD_CHILD,packet->size,packet->data,0);
@@ -180,7 +182,7 @@ double HVideo::getDelayTime(double diff) {
     if(fabs(diff)>10){
         delayTime = rate;
     }
-    return 0;
+    return delayTime;
 }
 
 double HVideo::synchronize(AVFrame *srcFrame,double pts) {
