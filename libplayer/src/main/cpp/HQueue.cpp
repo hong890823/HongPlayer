@@ -6,7 +6,7 @@
 
 HQueue::HQueue(HStatus *status) {
     this->status = status;
-    pthread_mutex_init(&mutexPacket, nullptr);
+    pthread_mutex_init(&mutexPacket,nullptr);
     pthread_mutex_init(&mutexFrame,nullptr);
     pthread_cond_init(&condPacket,nullptr);
     pthread_cond_init(&condFrame,nullptr);
@@ -31,7 +31,6 @@ void HQueue::putPacket(AVPacket *packet) {
 
  int HQueue::getPacket(AVPacket *packet) {
     pthread_mutex_lock(&mutexPacket);
-//    while(status!= nullptr && !status->exit){
     while(status!= nullptr && !status->exit){
         if(!queuePacket.empty()){
             AVPacket *avPacket = queuePacket.front();

@@ -41,8 +41,8 @@ void *frameInQueue(void *data){
         AVFrame *frame = av_frame_alloc();
         result = avcodec_receive_frame(video->avCodecContext,frame);
         if(result<0 && result!=AVERROR_EOF){
-            video->freeAVPacket(packet);
             video->freeAVFrame(frame);
+            video->freeAVPacket(packet);
             continue;
         }
         video->queue->putFrame(frame);
@@ -58,6 +58,7 @@ void *decodeVideoT(void *data){
 }
 
 void HVideo::decodeVideo() {
+    ///这里释放内存不要用freeAVPacket和freeAVFrame里面的方法，会立马报错退出程序
     while(status!= nullptr && !status->exit){
         if(queue->getPacketQueueSize()==0){
             continue;
@@ -65,7 +66,6 @@ void HVideo::decodeVideo() {
         ///硬解操作的是AVPacket
         if(codecType==1){
             AVPacket *packet = av_packet_alloc();
-//            LOGE("视频第%d个packet取出---",playCount);
             if(queue->getPacket(packet)!=0){
                 av_free(packet->data);
                 av_free(packet->buf);
@@ -99,7 +99,7 @@ void HVideo::decodeVideo() {
                 }
             }
             delayTime = getDelayTime(diff);
-            av_usleep(delayTime*1000);
+            av_usleep(static_cast<unsigned int>(delayTime * 1000));
 //            LOGE("硬解视频队列中还有%d帧数据",queue->getPacketQueueSize());
             //todo 视频播放进度以及硬解码开始
             callJava->onVideoInfo(H_THREAD_CHILD, static_cast<int>(clock), duration);
@@ -107,7 +107,6 @@ void HVideo::decodeVideo() {
             av_free(packet->data);
             av_free(packet->buf);
             av_free(packet->side_data);
-
             ///软解操作的是AVFrame
         }else if(codecType==0){
             AVFrame *frame = av_frame_alloc();
@@ -125,30 +124,50 @@ void HVideo::decodeVideo() {
             double diff = 0;
             if(audio!= nullptr)diff = audio->clock-clock;
             delayTime = getDelayTime(diff);
+            if(diff>=0.8){
+                freeAVFrame(frame);
+                continue;
+            }
             playCount++;
             if(playCount>500)playCount = 0;
             if(diff>=0.5){
                 if(frameRateBig){
                     if(playCount%3 == 0){
-                        av_frame_free(&frame);
-                        av_free(frame);
-                        frame = nullptr;
+                        freeAVFrame(frame);
                         queue->clearToKeyPacket();
                         continue;
                     }
                 }else{
-                    av_frame_free(&frame);
-                    av_free(frame);
-                    frame = nullptr;
+                    freeAVFrame(frame);
                     queue->clearToKeyPacket();
                     continue;
                 }
             }
             av_usleep(static_cast<unsigned int>(delayTime * 1000));
-            //todo 视频播放进度以及软解码开始
-            av_frame_free(&frame);
-            av_free(frame);
-            frame = nullptr;
+            if(frame->format==AV_PIX_FMT_YUV420P){
+                callJava->onGlRenderYuv(H_THREAD_CHILD, frame->linesize[0], frame->height, frame->data[0], frame->data[1], frame->data[2]);
+                  //这两种方法都可以
+//                callJava->onGlRenderYuv(H_THREAD_CHILD, avCodecContext->width, avCodecContext->height, frame->data[0], frame->data[1], frame->data[2]);
+            }else{
+                ///非YUV420转到YUV420
+                AVFrame *frameYUV420 = av_frame_alloc();
+                int num = av_image_get_buffer_size(AV_PIX_FMT_YUV420P,avCodecContext->width,avCodecContext->height,1);
+                auto *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
+                av_image_fill_arrays(frameYUV420->data,frameYUV420->linesize,buffer,AV_PIX_FMT_YUV420P,avCodecContext->width,avCodecContext->height,1);
+                SwsContext *sws_ctx = sws_getContext(avCodecContext->width,avCodecContext->height,avCodecContext->pix_fmt,avCodecContext->width,avCodecContext->height,AV_PIX_FMT_YUV420P,SWS_BICUBIC,
+                               nullptr, nullptr, nullptr);
+                if(!sws_ctx){
+                    av_frame_free(&frameYUV420);
+                    av_free(frameYUV420);
+                    av_free(buffer);
+                    continue;
+                }
+                //实际转换YUV420P
+                sws_scale(sws_ctx,frame->data,frame->linesize,0,frame->height,frameYUV420->data,frameYUV420->linesize);
+                //渲染
+                callJava->onGlRenderYuv(H_THREAD_CHILD, avCodecContext->width, avCodecContext->height, frameYUV420->data[0], frameYUV420->data[1], frameYUV420->data[2]);
+            }
+            freeAVFrame(frame);
         }
     }
 }
@@ -205,10 +224,10 @@ double HVideo::synchronize(AVFrame *srcFrame,double pts) {
 void HVideo::playVideo(int codecType) {
     this->codecType = codecType;
     if(codecType==0){
+        //经过测试这种先把AFrame放入队列再重队列中取出的方式，再从队列中取出的时候会报错，暂不知原因
         pthread_create(&frameThread, nullptr,frameInQueue,this);
     }
     pthread_create(&videoThread, nullptr,decodeVideoT,this);
-
 }
 
 void HVideo::freeAVPacket(AVPacket *packet) {

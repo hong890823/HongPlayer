@@ -14,6 +14,9 @@
 extern "C"
 {
 #include <libavutil/time.h>
+
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
 };
 
 class HVideo :public HBaseAV{

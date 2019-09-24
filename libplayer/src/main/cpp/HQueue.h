@@ -7,6 +7,7 @@
 
 #include "queue"
 #include "HStatus.h"
+#include "HLog.h"
 extern "C"
 {
 #include <libavcodec/avcodec.h>

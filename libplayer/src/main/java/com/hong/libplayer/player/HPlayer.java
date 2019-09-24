@@ -155,26 +155,46 @@ public class HPlayer {
         }
     }
 
+    /**
+     * 硬解执行：该方法正常执行的话就会触发到MediaCodec中绑定的surface中的surfaceTexture的SurfaceTexture.OnFrameAvailableListener接口的onFrameAvailable方法
+     * */
     public void decodeMediaCodec(byte[] bytes,int size,int pts){
         if(bytes!=null && mediaCodec!=null && mediaBufferInfo!=null){
             try{
+                //请求一个输入缓存，返回得到分配到的输入缓存的索引
                 int inputBufferIndex = mediaCodec.dequeueInputBuffer(10);
                 if(inputBufferIndex >= 0){
+                    //根据索引获取到输入缓存数组
                     ByteBuffer byteBuffer = mediaCodec.getInputBuffers()[inputBufferIndex];
+                    //数组清空，防止以前的数据污染数组
                     byteBuffer.clear();
+                    //把实际数据放入数组中
                     byteBuffer.put(bytes);
+                    //输入缓存入队列
                     mediaCodec.queueInputBuffer(inputBufferIndex,0,size,pts,0);
                 }
-
+                //获取输出缓存，并把信息存储到mediaBufferInfo中
                 int outputBufferIndex = mediaCodec.dequeueOutputBuffer(mediaBufferInfo,10);
 //                LogUtil.logE("硬解码值---"+outputBufferIndex);
                 while(outputBufferIndex >= 0){
+                    //释放输出缓存
                     mediaCodec.releaseOutputBuffer(outputBufferIndex,true);
+                    //再获取输出缓存，并把信息存储到mediaBufferInfo中
                     outputBufferIndex = mediaCodec.dequeueOutputBuffer(mediaBufferInfo,10);
                 }
             }catch(Exception e){
                 LogUtil.logE("硬解码失败"+e.getMessage());
             }
+        }
+    }
+
+    /**
+     * 软解执行
+     * */
+    public void setFrameData(int w, int h, byte[] y, byte[] u, byte[] v) {
+        if(hglSurfaceView != null){
+            hglSurfaceView.setCodecType(0);
+            hglSurfaceView.setYUVData(w, h, y, u, v);
         }
     }
 

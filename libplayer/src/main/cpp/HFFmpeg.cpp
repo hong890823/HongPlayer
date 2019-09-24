@@ -164,32 +164,18 @@ void HFFmpeg::startPlay() {
     int count = 0;
     if(audio!= nullptr)audio->playAudio();
     if(video!= nullptr){
-        if(mimeType==-1){
+        mimeType = -1;
+        if(mimeType==-1){//执行软解
             video->playVideo(0);
-        }else{
+        }else{//执行硬解
             video->playVideo(1);
         }
     }
 
-    AVBitStreamFilterContext* mimType = NULL;
-    if(mimeType == 1)
-    {
-        mimType =  av_bitstream_filter_init("h264_mp4toannexb");
-    }
-    else if(mimeType == 2)
-    {
-        mimType =  av_bitstream_filter_init("hevc_mp4toannexb");
-    }
-    else if(mimeType == 3)
-    {
-        mimType =  av_bitstream_filter_init("h264_mp4toannexb");
-    }
-    else if(mimeType == 4)
-    {
-        mimType =  av_bitstream_filter_init("h264_mp4toannexb");
-    }
+    ///经过测试硬解的时候添加SPS和PPS是可行的，软解的话不行
+    AVBitStreamFilterContext *filterContext = nullptr;
+    if(mimeType!=-1)filterContext = getH264(mimeType);
 
-    LOGE("mimType是%d",mimType);
     while(!status->exit){
         if(audio!= nullptr && audio->queue->getPacketQueueSize()>100){
             av_usleep(1000*100);
@@ -209,18 +195,7 @@ void HFFmpeg::startPlay() {
 //                LOGD("放入第%d个Packet进队列",count);
                 audio->queue->putPacket(packet);
             }else if(video!= nullptr && packet->stream_index==video->streamIndex){
-                if(mimType != NULL && !isAvi)
-                {
-                    uint8_t *data;
-                    av_bitstream_filter_filter(mimType, avFormatContext->streams[video->streamIndex]->codec, NULL, &data, &packet->size, packet->data, packet->size, 0);
-                    uint8_t *tdata = NULL;
-                    tdata = packet->data;
-                    packet->data = data;
-                    if(tdata != NULL)
-                    {
-                        av_free(tdata);
-                    }
-                }
+                if(filterContext!= nullptr)addSPSAndPPS(filterContext,packet);
                 video->queue->putPacket(packet);
             }else{
                 av_packet_free(&packet);
@@ -233,9 +208,9 @@ void HFFmpeg::startPlay() {
             packet = nullptr;
         }
     }
-    if(mimType != NULL) {
-            av_bitstream_filter_close(mimType);
-        }
+    if(filterContext != nullptr) {
+            av_bitstream_filter_close(filterContext);
+    }
 
 }
 
@@ -282,12 +257,44 @@ int HFFmpeg::getMimeType(const char* codecName){
     return -1;
 }
 
+///分离某些封装格式中的H.264
+AVBitStreamFilterContext *HFFmpeg::getH264(int mimeType) {
+    AVBitStreamFilterContext* filterContext = nullptr;
+    if(mimeType == 1){
+        filterContext =  av_bitstream_filter_init("h264_mp4toannexb");
+    }
+    else if(mimeType == 2){
+        filterContext =  av_bitstream_filter_init("hevc_mp4toannexb");
+    }
+    else if(mimeType == 3){
+        filterContext =  av_bitstream_filter_init("h264_mp4toannexb");
+    }
+    else if(mimeType == 4){
+        filterContext =  av_bitstream_filter_init("h264_mp4toannexb");
+    }
+    return filterContext;
+}
+
+/**
+ * 每个AVPacket的data添加了H.264的NALU的起始码{0,0,0,1}
+ * 每个IDR帧数据前面添加了SPS和PPS
+ * */
+void HFFmpeg::addSPSAndPPS(AVBitStreamFilterContext *filterContext,AVPacket *packet) {
+    if(filterContext != nullptr && !isAvi){
+        uint8_t *data;
+        av_bitstream_filter_filter(filterContext, avFormatContext->streams[video->streamIndex]->codec, nullptr, &data, &packet->size, packet->data, packet->size, 0);
+        uint8_t *tdata = nullptr;
+        tdata = packet->data;
+        packet->data = data;
+        if(tdata != nullptr){
+            av_free(tdata);
+        }
+    }
+}
+
 void HFFmpeg::callError(int errorCode, char *errorMsg) {
     callJava->onError(H_THREAD_CHILD, errorCode, errorMsg);
     exit = true;
 }
-
-
-
 
 #pragma clang diagnostic pop

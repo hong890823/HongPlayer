@@ -19,6 +19,7 @@ HCallJava::HCallJava(JavaVM *vm,JNIEnv *env,jobject obj) {
     jmid_init_mdeiaCodec = jniEnv->GetMethodID(jcl,"initMediaCodec","(III[B[B)V");
     jmid_video_info = jniEnv->GetMethodID(jcl,"onVideoInfo","(II)V");
     jmid_dec_mediaCodec = jniEnv->GetMethodID(jcl,"decodeMediaCodec","([BII)V");
+    jmid_gl_yuv = jniEnv->GetMethodID(jcl, "setFrameData", "(II[B[B[B)V");
 }
 
 HCallJava::~HCallJava() {
@@ -111,6 +112,46 @@ void HCallJava::onDecMediaCodec(int type, int size, uint8_t *packet_data, int pt
     }
 }
 
+//YUV420 所以Y:U:V=4:1:1
+void HCallJava::onGlRenderYuv(int type, int width, int height, uint8_t *fy, uint8_t *fu, uint8_t *fv) {
+    if(H_THREAD_CHILD==type){
+        JNIEnv *jniEnv;
+        javaVM->AttachCurrentThread(&jniEnv,0);
+
+        jbyteArray y = jniEnv->NewByteArray(width*height);
+        jniEnv->SetByteArrayRegion(y, 0,width*height, reinterpret_cast<const jbyte *>(fy));
+
+        jbyteArray u = jniEnv->NewByteArray(width*height/4);
+        jniEnv->SetByteArrayRegion(u, 0,width*height/4, reinterpret_cast<const jbyte *>(fu));
+
+        jbyteArray v = jniEnv->NewByteArray(width*height/4);
+        jniEnv->SetByteArrayRegion(v, 0,width*height/4, reinterpret_cast<const jbyte *>(fv));
+
+        jniEnv->CallVoidMethod(jobj,jmid_gl_yuv,width,height,y,u,v);
+
+        jniEnv->DeleteLocalRef(y);
+        jniEnv->DeleteLocalRef(u);
+        jniEnv->DeleteLocalRef(v);
+
+        javaVM->DetachCurrentThread();
+    }else{
+        jbyteArray y = jniEnv->NewByteArray(width*height);
+        jniEnv->SetByteArrayRegion(y, 0,width*height, reinterpret_cast<const jbyte *>(fy));
+
+        jbyteArray u = jniEnv->NewByteArray(width*height/4);
+        jniEnv->SetByteArrayRegion(u, 0,width*height/4, reinterpret_cast<const jbyte *>(fu));
+
+        jbyteArray v = jniEnv->NewByteArray(width*height/4);
+        jniEnv->SetByteArrayRegion(v, 0,width*height/4, reinterpret_cast<const jbyte *>(fv));
+
+        jniEnv->CallVoidMethod(jobj,jmid_gl_yuv,width,height,y,u,v);
+
+        jniEnv->DeleteLocalRef(y);
+        jniEnv->DeleteLocalRef(u);
+        jniEnv->DeleteLocalRef(v);
+    }
+}
+
 void HCallJava::onVideoInfo(int type, int currentTime, int total) {
     if(H_THREAD_CHILD==type){
         JNIEnv *jniEnv;
@@ -121,6 +162,7 @@ void HCallJava::onVideoInfo(int type, int currentTime, int total) {
         jniEnv->CallVoidMethod(jobj,jmid_video_info,currentTime,total);
     }
 }
+
 
 
 
