@@ -18,17 +18,17 @@
         <activity android:name=".activity.MainActivity"
             android:screenOrientation="portrait"
             >
-
-        </activity>
-
-        <activity android:name=".activity.VideoLiveActivity"
-            android:configChanges="orientation|screenSize"
-            android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity android:name=".activity.VideoLiveActivity"
+            android:configChanges="orientation|screenSize"
+            android:screenOrientation="landscape">
+
         </activity>
     </application>
 

@@ -20,6 +20,7 @@ HVideo::~HVideo() {
 void *frameInQueue(void *data){
     auto *video = (HVideo *)data;
     while(!video->status->exit){
+        video->isExit2 = false;
         //设置frame queue的缓冲区
         if(video->queue->getFrameQueueSize()>20){
             continue;
@@ -48,6 +49,7 @@ void *frameInQueue(void *data){
         video->queue->putFrame(frame);
         video->freeAVPacket(packet);
     }
+    video->isExit2 = true;
     pthread_exit(&video->frameThread);
 }
 
@@ -60,6 +62,7 @@ void *decodeVideoT(void *data){
 void HVideo::decodeVideo() {
     ///这里释放内存不要用freeAVPacket和freeAVFrame里面的方法，会立马报错退出程序
     while(status!= nullptr && !status->exit){
+        isExit = false;
         if(queue->getPacketQueueSize()==0){
             continue;
         }
@@ -170,6 +173,7 @@ void HVideo::decodeVideo() {
             freeAVFrame(frame);
         }
     }
+    isExit = true;
 }
 
 double HVideo::getDelayTime(double diff) {
@@ -224,7 +228,6 @@ double HVideo::synchronize(AVFrame *srcFrame,double pts) {
 void HVideo::playVideo(int codecType) {
     this->codecType = codecType;
     if(codecType==0){
-        //经过测试这种先把AFrame放入队列再重队列中取出的方式，再从队列中取出的时候会报错，暂不知原因
         pthread_create(&frameThread, nullptr,frameInQueue,this);
     }
     pthread_create(&videoThread, nullptr,decodeVideoT,this);
@@ -240,6 +243,44 @@ void HVideo::freeAVFrame(AVFrame *frame) {
     av_frame_free(&frame);
     av_free(frame);
     frame = nullptr;
+}
+
+void HVideo::release() {
+    if(status!= nullptr){
+        status->exit = true;
+    }
+    if(queue!= nullptr){
+        queue->noticeThread();
+    }
+    //等待渲染线程结束
+    int count = 0;
+    while(!isExit || !isExit2){
+        if(count>1000){
+            isExit = true;
+            isExit2 = true;
+        }
+        count++;
+        av_usleep(1000 * 10);
+    }
+    if(queue!= nullptr){
+        queue->release();
+        delete(queue);
+        queue = nullptr;
+    }
+    if(callJava!= nullptr){
+        callJava= nullptr;
+    }
+    if(audio!= nullptr){
+        audio = nullptr;
+    }
+    if(avCodecContext!= nullptr){
+        avcodec_close(avCodecContext);
+        avcodec_free_context(&avCodecContext);
+        avCodecContext = nullptr;
+    }
+    if(status!= nullptr){
+        status = nullptr;
+    }
 }
 
 

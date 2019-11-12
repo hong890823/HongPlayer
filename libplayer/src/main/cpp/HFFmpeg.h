@@ -56,6 +56,7 @@ public:
     int getMimeType(const char* codecName);
     AVBitStreamFilterContext* getH264(int mimeType);
     void addSPSAndPPS(AVBitStreamFilterContext* filterContext, AVPacket *packet);
+    void release();
 };
 
 

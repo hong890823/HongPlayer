@@ -93,7 +93,9 @@ public class HPlayer {
         }).start();
     }
 
-
+    public void stop(){
+        native_stop();
+    }
 
     /**
      * 我是分割线，分割与JNI相关的方法
@@ -104,6 +106,8 @@ public class HPlayer {
     private native void native_prepare(String url,boolean isOnlyMusic);
 
     private native void native_start();
+
+    private native void native_stop();
 
     private void calledOnPrepared(){
         if(onPreparedListener!=null)onPreparedListener.onPrepared();

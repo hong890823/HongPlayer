@@ -51,7 +51,7 @@ public:
     SLVolumeItf pcmPlayerVolume = NULL;
     SLMuteSoloItf  pcmPlayerMuteSolo = NULL;
     SLAndroidSimpleBufferQueueItf pcmBufferQueue = NULL;
-
+    //播放循环是否结束的标志
     bool isExit = false;
     bool hasVideo = false;
 
@@ -65,6 +65,9 @@ public:
     int getPcmData(void **out_buffer_point );
     void freeAVPacket(AVPacket *packet);
     void freeAVFrame(AVFrame *frame);
+    void pause();
+    void resume();
+    void release();
 };
 
 

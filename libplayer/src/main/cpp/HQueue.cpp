@@ -114,6 +114,16 @@ int HQueue::clearPacketQueue() {
 }
 
 int HQueue::clearFrameQueue() {
+    pthread_cond_signal(&condFrame);
+    pthread_mutex_lock(&mutexFrame);
+    while (!queueFrame.empty()){
+        AVFrame *frame = queueFrame.front();
+        queueFrame.pop();
+        av_frame_free(&frame);
+        av_free(frame);
+        frame = nullptr;
+    }
+    pthread_mutex_unlock(&mutexFrame);
     return 0;
 }
 
@@ -139,6 +149,12 @@ int HQueue::noticeThread() {
     pthread_cond_signal(&condFrame);
     pthread_cond_signal(&condPacket);
     return 0;
+}
+
+void HQueue::release() {
+    noticeThread();
+    clearPacketQueue();
+    clearFrameQueue();
 }
 
 

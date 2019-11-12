@@ -164,7 +164,6 @@ void HFFmpeg::startPlay() {
     int count = 0;
     if(audio!= nullptr)audio->playAudio();
     if(video!= nullptr){
-        mimeType = -1;
         if(mimeType==-1){//执行软解
             video->playVideo(0);
         }else{//执行硬解
@@ -295,6 +294,30 @@ void HFFmpeg::addSPSAndPPS(AVBitStreamFilterContext *filterContext,AVPacket *pac
 void HFFmpeg::callError(int errorCode, char *errorMsg) {
     callJava->onError(H_THREAD_CHILD, errorCode, errorMsg);
     exit = true;
+}
+
+void HFFmpeg::release() {
+    status->exit = true;
+    pthread_mutex_lock(&initMutex);
+    if(audio!= nullptr){
+        audio->release();
+        delete(audio);
+        audio= nullptr;
+    }
+    if(video!= nullptr){
+        video->release();
+        delete(video);
+        video = nullptr;
+    }
+    if(avFormatContext!= nullptr){
+        avformat_close_input(&avFormatContext);
+        avformat_free_context(avFormatContext);
+        avFormatContext= nullptr;
+    }
+    if(callJava!= nullptr){
+        callJava = nullptr;
+    }
+    pthread_mutex_unlock(&initMutex);
 }
 
 #pragma clang diagnostic pop

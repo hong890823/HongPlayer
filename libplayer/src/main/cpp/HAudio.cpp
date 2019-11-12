@@ -115,9 +115,8 @@ void HAudio::initOpenSL() {
  * 所以从packet队列中拿出数据转成frame再播放就可以了
  * */
 int HAudio::getPcmData(void **out_buffer_point) {
-//    LOGD("开始读取音频数据");
-    int count = 0;
     while(!status->exit){
+        isExit = false;
         int result;
         AVPacket *packet = nullptr;
         if(queue->getPacketQueueSize()==0){
@@ -132,8 +131,6 @@ int HAudio::getPcmData(void **out_buffer_point) {
                 isReadPacketFinished = true;
                 continue;
             }
-            count++;
-//            LOGE("从队列中取出第%d个Packet",count);
             ///把packet放到解码器中
             result = avcodec_send_packet(avCodecContext,packet);
             if(result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF){
@@ -210,6 +207,7 @@ int HAudio::getPcmData(void **out_buffer_point) {
             continue;
         }
     }
+    isExit = true;
     return pcm_data_size;
 }
 
@@ -272,6 +270,67 @@ void HAudio::freeAVFrame(AVFrame *frame) {
     av_free(frame);
     frame = nullptr;
 }
+
+void HAudio::pause() {
+    if(pcmPlayerPlay!= nullptr)(*pcmPlayerPlay)->SetPlayState(pcmPlayerPlay,SL_PLAYSTATE_PAUSED);
+}
+
+void HAudio::resume() {
+    if(pcmPlayerPlay!= nullptr)(*pcmPlayerPlay)->SetPlayState(pcmPlayerPlay,SL_PLAYSTATE_PLAYING);
+}
+
+void HAudio::release() {
+    pause();
+    if(status!= nullptr)status->exit = true;
+    if(queue!= nullptr)queue->noticeThread();
+    //todo等待缓冲线程结束
+    int count = 0;
+    while(!isExit){
+        if(count>1000)isExit = true;
+        count++;
+        av_usleep(1000 *10);
+    }
+    if(queue!= nullptr){
+        queue->release();
+        delete(queue);
+        queue = nullptr;
+    }
+    if(callJava!= nullptr)callJava= nullptr;
+    if(pcmPlayerObject!= nullptr){
+        (*pcmPlayerObject)->Destroy(pcmPlayerObject);
+        pcmPlayerObject = nullptr;
+        pcmPlayerPlay = nullptr;
+        pcmPlayerVolume = nullptr;
+        pcmBufferQueue = nullptr;
+        out_buffer = nullptr;
+        pcm_data_size = 0;
+    }
+    if (outputMixObjectItf != nullptr) {
+        (*outputMixObjectItf)->Destroy(outputMixObjectItf);
+        outputMixObjectItf = nullptr;
+        slEnvironmentalReverbItf = nullptr;
+    }
+    if(out_buffer!= nullptr){
+        free(out_buffer);
+        out_buffer = nullptr;
+    }
+    if(out_buffer_point!= nullptr){
+        free(out_buffer_point);
+        out_buffer_point = nullptr;
+    }
+    if(avCodecContext!= nullptr){
+        avcodec_close(avCodecContext);
+        avcodec_free_context(&avCodecContext);
+        avCodecContext = nullptr;
+    }
+    if(status!= nullptr){
+        status = nullptr;
+    }
+
+}
+
+
+
 
 
 

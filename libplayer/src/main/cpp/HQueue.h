@@ -37,6 +37,7 @@ public:
 
     int clearToKeyPacket();
     int noticeThread();
+    void release();
 };
 
 

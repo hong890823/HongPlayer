@@ -33,3 +33,13 @@ JNIEXPORT void JNICALL
 Java_com_hong_libplayer_player_HPlayer_native_1start(JNIEnv *env, jobject instance) {
     if(hFFmpeg!= nullptr)hFFmpeg->startPlay();
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_hong_libplayer_player_HPlayer_native_1stop(JNIEnv *env, jobject instance) {
+    if(hFFmpeg!= nullptr){
+        hFFmpeg->release();
+        delete(hFFmpeg);
+    }
+
+}

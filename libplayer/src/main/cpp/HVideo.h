@@ -39,6 +39,9 @@ public:
     double framePts = 0;
     double video_clock = 0;
 
+    //解码循环是否完成的标志
+    bool isExit,isExit2;
+
 public:
     HVideo(HStatus *status,HCallJava *callJava,HAudio *audio);
     ~HVideo();
@@ -49,6 +52,7 @@ public:
     double synchronize(AVFrame *srcFrame,double pts);
     void freeAVPacket(AVPacket *packet);
     void freeAVFrame(AVFrame *frame);
+    void release();
 };
 
 

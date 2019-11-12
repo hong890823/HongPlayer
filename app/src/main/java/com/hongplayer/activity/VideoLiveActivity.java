@@ -40,8 +40,10 @@ public class VideoLiveActivity extends BaseActivity implements HOnPreparedListen
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_video_live);
         surfaceView = findViewById(R.id.video_surface_view);
-//        liveUrl = (String) getIntent().getExtras().get("url");
-        liveUrl = "http://baobab.kaiyanapp.com/api/v1/playUrl?vid=172434&resourceType=video&editionType=default&source=aliyun&playUrlType=url_oss";
+        liveUrl = (String) getIntent().getExtras().get("url");
+//        liveUrl = "http://baobab.kaiyanapp.com/api/v1/playUrl?vid=172434&resourceType=video&editionType=default&source=aliyun&playUrlType=url_oss";
+//        liveUrl = "rtsp://admin:zst123456@10.1.26.230:554/cam/realmonitor?channel=1&subtype=0";
+
         liveUrl = deleteHttps(liveUrl);
         player = new HPlayer();
         player.setOnPreparedListener(this);
@@ -77,5 +79,11 @@ public class VideoLiveActivity extends BaseActivity implements HOnPreparedListen
     @Override
     public void onError(int errorCode, String errorMsg) {
 
+    }
+
+    @Override
+    public void onBackPressed() {
+        if(player!=null)player.stop();
+        super.onBackPressed();
     }
 }
