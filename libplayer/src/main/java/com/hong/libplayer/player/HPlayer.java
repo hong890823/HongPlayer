@@ -94,7 +94,26 @@ public class HPlayer {
     }
 
     public void stop(){
-        native_stop();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                native_stop();
+                if(mediaCodec != null) {
+                    try {
+                        mediaCodec.flush();
+                        mediaCodec.stop();
+                        mediaCodec.release();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    mediaCodec = null;
+                }
+                if(hglSurfaceView != null) {
+                    hglSurfaceView.setCodecType(-1);
+                    hglSurfaceView.requestRender();
+                }
+            }
+        }).start();
     }
 
     /**
@@ -204,6 +223,10 @@ public class HPlayer {
 
     public void onVideoInfo(int currentTime,int totalTime){
 //        LogUtil.logD("currentTime--"+currentTime+"totalTime--"+totalTime);
+    }
+
+    public void onComplete(){
+
     }
 
     private String getMimeType(int type) {

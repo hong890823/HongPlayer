@@ -39,8 +39,14 @@ public:
     double framePts = 0;
     double video_clock = 0;
 
-    //解码循环是否完成的标志
-    bool isExit,isExit2;
+    /*
+     * 解码循环是否完成的标志
+     * 注意这里初使变量为true
+     * 为false的话，那么在退出的时候
+     * 根据video的release逻辑就得等一等了哈
+     * */
+    bool isHardExit=true;
+    bool isSoftExit=true;
 
 public:
     HVideo(HStatus *status,HCallJava *callJava,HAudio *audio);

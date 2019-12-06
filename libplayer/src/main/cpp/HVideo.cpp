@@ -20,14 +20,16 @@ HVideo::~HVideo() {
 void *frameInQueue(void *data){
     auto *video = (HVideo *)data;
     while(!video->status->exit){
-        video->isExit2 = false;
+        video->isSoftExit = false;
         //设置frame queue的缓冲区
         if(video->queue->getFrameQueueSize()>20){
             continue;
         }
-        //如果packet queue为空则等待
-        if(video->queue->getPacketQueueSize()==0){
-            continue;
+        //硬解情况下如果packet queue为空则等待
+        if(video->codecType==1){
+            if(video->queue->getPacketQueueSize()==0){
+                continue;
+            }
         }
         AVPacket *packet = av_packet_alloc();
         if(video->queue->getPacket(packet)!=0){
@@ -49,7 +51,7 @@ void *frameInQueue(void *data){
         video->queue->putFrame(frame);
         video->freeAVPacket(packet);
     }
-    video->isExit2 = true;
+    video->isSoftExit = true;
     pthread_exit(&video->frameThread);
 }
 
@@ -62,7 +64,7 @@ void *decodeVideoT(void *data){
 void HVideo::decodeVideo() {
     ///这里释放内存不要用freeAVPacket和freeAVFrame里面的方法，会立马报错退出程序
     while(status!= nullptr && !status->exit){
-        isExit = false;
+        isHardExit = false;
         if(queue->getPacketQueueSize()==0){
             continue;
         }
@@ -110,6 +112,7 @@ void HVideo::decodeVideo() {
             av_free(packet->data);
             av_free(packet->buf);
             av_free(packet->side_data);
+            LOGE("isExit为false");
             ///软解操作的是AVFrame
         }else if(codecType==0){
             AVFrame *frame = av_frame_alloc();
@@ -173,7 +176,8 @@ void HVideo::decodeVideo() {
             freeAVFrame(frame);
         }
     }
-    isExit = true;
+    LOGE("isExit为true");
+    isHardExit = true;
 }
 
 double HVideo::getDelayTime(double diff) {
@@ -254,10 +258,11 @@ void HVideo::release() {
     }
     //等待渲染线程结束
     int count = 0;
-    while(!isExit || !isExit2){
+    while(!isHardExit || !isSoftExit){
+//        LOGE("等待视频渲染结束..%d",count);
         if(count>1000){
-            isExit = true;
-            isExit2 = true;
+            isHardExit = true;
+            isSoftExit = true;
         }
         count++;
         av_usleep(1000 * 10);

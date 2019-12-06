@@ -47,7 +47,7 @@ public class MainActivity extends BaseActivity {
     private List<Fragment> fragmentPages;
     private int currentIndex = -1;
 
-    private String[] titles = {"视频", "直播","广播", "本地", "关于"};
+    private String[] titles = {"视频","广播", "本地", "关于"};
     private int[] imgs = {R.drawable.nav_video_selector, R.drawable.nav_video_selector,R.drawable.nav_audio_selector, R.drawable.nav_file_selector, R.drawable.nav_about_selector};
 
     @Override
@@ -87,7 +87,6 @@ public class MainActivity extends BaseActivity {
         aboutFragment = new AboutFragment();
 
         fragmentPages.add(videoFragment);
-        fragmentPages.add(liveFragment);
         fragmentPages.add(radioFragment);
         fragmentPages.add(localFragment);
         fragmentPages.add(aboutFragment);
@@ -108,16 +107,13 @@ public class MainActivity extends BaseActivity {
                 if(position == 0) {
                     setTitle("视频");
                 }
-                else if(position == 1){
-                    setTitle("直播");
-                }
-                else if(position == 2) {
+                else if(position == 1) {
                     setTitle("广播");
                 }
-                else if(position == 3) {
+                else if(position == 2) {
                     setTitle("本地");
                 }
-                else if(position == 4) {
+                else if(position == 3) {
                     setTitle("关于");
                 }
             }

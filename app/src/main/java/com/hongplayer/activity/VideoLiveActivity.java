@@ -1,9 +1,6 @@
 package com.hongplayer.activity;
 
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Looper;
-import android.os.MessageQueue;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.view.WindowManager;
@@ -19,13 +16,8 @@ import butterknife.BindView;
 
 public class VideoLiveActivity extends BaseActivity implements HOnPreparedListener, HOnErrorListener {
 
-//    @BindView(R.id.video_surface_view)
+    @BindView(R.id.video_surface_view)
     HGLSurfaceView surfaceView;
-
-    /**
-     * 真视通-大华摄像头：rtsp://admin:zst123456@10.1.26.230:554/cam/realmonitor?channel=1&subtype=0
-     * 真视通-89流媒体：rtsp://10.1.6.89/cam/realmonitor
-     * */
 
     /**
      * http://www.imooc.com/article/91381
@@ -39,10 +31,7 @@ public class VideoLiveActivity extends BaseActivity implements HOnPreparedListen
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_video_live);
-        surfaceView = findViewById(R.id.video_surface_view);
         liveUrl = (String) getIntent().getExtras().get("url");
-//        liveUrl = "http://baobab.kaiyanapp.com/api/v1/playUrl?vid=172434&resourceType=video&editionType=default&source=aliyun&playUrlType=url_oss";
-//        liveUrl = "rtsp://admin:zst123456@10.1.26.230:554/cam/realmonitor?channel=1&subtype=0";
 
         liveUrl = deleteHttps(liveUrl);
         player = new HPlayer();

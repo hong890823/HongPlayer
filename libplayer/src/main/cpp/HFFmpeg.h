@@ -35,6 +35,7 @@ public:
 
     bool isAvi = false;
     bool isOnlyMusic = false;
+    bool exitByUser = false;
     bool exit = false;
     int mimeType = 1;
 

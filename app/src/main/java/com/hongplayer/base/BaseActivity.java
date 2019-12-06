@@ -11,6 +11,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,6 +27,11 @@ public class BaseActivity extends AppCompatActivity {
     @Nullable
     @BindView(R.id.title_tv)
     TextView titleTv;
+
+    @Nullable
+    @BindView(R.id.iv_back)
+    ImageView mivBack;
+
     @Nullable
     @BindView(R.id.system_bar_layout)
     View systemBarLayout;
@@ -74,6 +80,16 @@ public class BaseActivity extends AppCompatActivity {
     public void setTitle(String title) {
         if(titleTv != null) {
             titleTv.setText(title);
+        }
+    }
+
+    /**
+     * 显示返回图标
+     */
+    public void setBackView() {
+        if(mivBack != null)
+        {
+            mivBack.setVisibility(View.VISIBLE);
         }
     }
 

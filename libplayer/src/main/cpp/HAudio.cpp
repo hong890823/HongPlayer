@@ -281,7 +281,6 @@ void HAudio::resume() {
 
 void HAudio::release() {
     pause();
-    if(status!= nullptr)status->exit = true;
     if(queue!= nullptr)queue->noticeThread();
     //todo等待缓冲线程结束
     int count = 0;
@@ -295,7 +294,6 @@ void HAudio::release() {
         delete(queue);
         queue = nullptr;
     }
-    if(callJava!= nullptr)callJava= nullptr;
     if(pcmPlayerObject!= nullptr){
         (*pcmPlayerObject)->Destroy(pcmPlayerObject);
         pcmPlayerObject = nullptr;
@@ -309,6 +307,11 @@ void HAudio::release() {
         (*outputMixObjectItf)->Destroy(outputMixObjectItf);
         outputMixObjectItf = nullptr;
         slEnvironmentalReverbItf = nullptr;
+    }
+    if(slObjectItf!= nullptr){
+        (*slObjectItf)->Destroy(slObjectItf);
+        slObjectItf = nullptr;
+        slEngineItf = nullptr;
     }
     if(out_buffer!= nullptr){
         free(out_buffer);

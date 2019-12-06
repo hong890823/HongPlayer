@@ -20,6 +20,7 @@ HCallJava::HCallJava(JavaVM *vm,JNIEnv *env,jobject obj) {
     jmid_video_info = jniEnv->GetMethodID(jcl,"onVideoInfo","(II)V");
     jmid_dec_mediaCodec = jniEnv->GetMethodID(jcl,"decodeMediaCodec","([BII)V");
     jmid_gl_yuv = jniEnv->GetMethodID(jcl, "setFrameData", "(II[B[B[B)V");
+    jmid_complete = jniEnv->GetMethodID(jcl,"onComplete","()V");
 }
 
 HCallJava::~HCallJava() {
@@ -162,6 +163,29 @@ void HCallJava::onVideoInfo(int type, int currentTime, int total) {
         jniEnv->CallVoidMethod(jobj,jmid_video_info,currentTime,total);
     }
 }
+
+void HCallJava::onComplete(int type) {
+    if(H_THREAD_CHILD==type){
+        JNIEnv *jniEnv;
+        javaVM->AttachCurrentThread(&jniEnv,0);
+        jniEnv->CallVoidMethod(jobj,jmid_complete);
+        javaVM->DetachCurrentThread();
+    }else{
+        jniEnv->CallVoidMethod(jobj,jmid_complete);
+    }
+}
+
+void HCallJava::release() {
+    if(javaVM!= nullptr)
+    {
+        javaVM = nullptr;
+    }
+    if(jniEnv!= nullptr)
+    {
+        jniEnv = nullptr;
+    }
+}
+
 
 
 

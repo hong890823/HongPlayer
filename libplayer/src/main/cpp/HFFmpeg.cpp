@@ -12,7 +12,7 @@ HFFmpeg::HFFmpeg(HCallJava *callJava,const char *url) {
 }
 
 HFFmpeg::~HFFmpeg() {
-
+    pthread_mutex_destroy(&initMutex);
 }
 
 void *decode(void *data){
@@ -25,12 +25,31 @@ void HFFmpeg::prepareFFmpeg() {
     pthread_create(&decodeThread,NULL,decode,this);
 }
 
+int avformat_interrupt_cb(void *ctx)
+{
+    HFFmpeg *hfFmpeg = (HFFmpeg *) ctx;
+    if(hfFmpeg->status->exit)
+    {
+        if(LOG_SHOW)
+        {
+            LOGE("avformat_interrupt_cb return 1")
+        }
+        return AVERROR_EOF;
+    }
+    if(LOG_SHOW)
+    {
+        LOGE("avformat_interrupt_cb return 0")
+    }
+    return 0;
+}
+
 /**
  * 准备FFmpeg的相关信息
  * 从注册开始一直到获取到解码的上下文结束
  * */
 void HFFmpeg::decodeFFmpeg() {
     pthread_mutex_init(&initMutex,nullptr);
+    exit = false;
     isAvi = false;
     av_register_all();
     avformat_network_init();
@@ -48,6 +67,8 @@ void HFFmpeg::decodeFFmpeg() {
         callError(H_ERROR_CODE,const_cast<char *>("open input url error:%s",url));
         pthread_mutex_unlock(&initMutex);
     }
+    avFormatContext->interrupt_callback.callback = avformat_interrupt_cb;
+    avFormatContext->interrupt_callback.opaque = this;
     if(avformat_find_stream_info(avFormatContext,nullptr)<0){
         if(LOG_SHOW)LOGE("find stream info error");
         callError(H_ERROR_CODE,const_cast<char *>("find stream info error"));
@@ -200,6 +221,11 @@ void HFFmpeg::startPlay() {
                 av_packet_free(&packet);
                 av_free(packet);
                 packet = nullptr;
+                if((video != NULL && video->queue->getFrameQueueSize() == 0) || (audio != NULL && audio->queue->getPacketQueueSize() == 0))
+                {
+                    status->exit = true;
+                    break;
+                }
             }
         }else{
             av_packet_free(&packet);
@@ -210,7 +236,10 @@ void HFFmpeg::startPlay() {
     if(filterContext != nullptr) {
             av_bitstream_filter_close(filterContext);
     }
-
+    if(!exitByUser && callJava != nullptr){
+        callJava->onComplete(H_THREAD_CHILD);
+    }
+    exit = true;
 }
 
 void HFFmpeg::setAudioChannel(int index) {
@@ -299,6 +328,21 @@ void HFFmpeg::callError(int errorCode, char *errorMsg) {
 void HFFmpeg::release() {
     status->exit = true;
     pthread_mutex_lock(&initMutex);
+    int sleepCount = 0;
+    while(!exit)
+    {
+        if(sleepCount > 1000)//十秒钟还没有退出就自动强制退出
+        {
+            exit = true;
+        }
+        if(LOG_SHOW)
+        {
+            LOGE("wait ffmpeg  exit %d", sleepCount);
+        }
+
+        sleepCount++;
+        av_usleep(1000 * 10);//暂停10毫秒
+    }
     if(audio!= nullptr){
         audio->release();
         delete(audio);

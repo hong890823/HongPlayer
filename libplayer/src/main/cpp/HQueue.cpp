@@ -13,6 +13,7 @@ HQueue::HQueue(HStatus *status) {
 }
 
 HQueue::~HQueue() {
+    this->status = nullptr;
     pthread_mutex_destroy(&mutexPacket);
     pthread_mutex_destroy(&mutexFrame);
     pthread_cond_destroy(&condPacket);
@@ -104,8 +105,9 @@ int HQueue::clearPacketQueue() {
     while(!queuePacket.empty()){
         AVPacket *packet = queuePacket.front();
         queuePacket.pop();
-        av_packet_free(&packet);
-        av_free(packet);
+        av_free(packet->data);
+        av_free(packet->buf);
+        av_free(packet->side_data);
         packet = nullptr;
 
     }
@@ -113,6 +115,10 @@ int HQueue::clearPacketQueue() {
     return 0;
 }
 
+/**
+ * clearPacketQueue和clearFrameQueue的释放方式不一样
+ * 试过一样的，结果在video release的时候会报错
+ * */
 int HQueue::clearFrameQueue() {
     pthread_cond_signal(&condFrame);
     pthread_mutex_lock(&mutexFrame);

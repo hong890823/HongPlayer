@@ -142,7 +142,7 @@ public class VideoFragment extends BaseFragment{
 
             @Override
             public void onError(int code, String msg) {
-                Toast.makeText(getContext(), "msg", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), msg, Toast.LENGTH_SHORT).show();
             }
         },getActivity()));
     }

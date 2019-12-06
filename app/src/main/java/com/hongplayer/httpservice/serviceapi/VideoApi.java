@@ -12,9 +12,6 @@ import java.util.List;
 import io.reactivex.Observable;
 import io.reactivex.Observer;
 
-/**
- * Created by ywl on 2016/5/19.
- */
 public class VideoApi extends VideoBaseApi {
 
     private static final String API_OPEN_BASE_URL = "https://api.apiopen.top/";
@@ -39,7 +36,6 @@ public class VideoApi extends VideoBaseApi {
         }
         return videoApi;
     }
-    /*-------------------------------------获取的方法-------------------------------------*/
 
     public void getVideoList(Observer<List<VideoResult>> subscriber){
         Observable<List<VideoResult>> observable = videoService.getVideoList()
