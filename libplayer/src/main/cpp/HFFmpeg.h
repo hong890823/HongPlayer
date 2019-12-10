@@ -38,13 +38,15 @@ public:
     bool exitByUser = false;
     bool exit = false;
     int mimeType = 1;
+    int duration = 0;
 
     std::deque<HChannel*> audioChannels;
     std::deque<HChannel*> videoChannels;
 
+    pthread_mutex_t seekMutex;
 
 public:
-    HFFmpeg(HCallJava *callJava,const char *url);
+    HFFmpeg(HCallJava *callJava,const char *url, bool isOnlyMusic);
     ~HFFmpeg();
     void prepareFFmpeg();
     void decodeFFmpeg();
@@ -58,6 +60,8 @@ public:
     AVBitStreamFilterContext* getH264(int mimeType);
     void addSPSAndPPS(AVBitStreamFilterContext* filterContext, AVPacket *packet);
     void release();
+    int getDuration();
+    void seek(int64_t seconds);
 };
 
 

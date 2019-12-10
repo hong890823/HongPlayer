@@ -17,7 +17,8 @@ class HCallJava {
     jmethodID jmid_video_info;
     jmethodID jmid_dec_mediaCodec;
     jmethodID jmid_gl_yuv;
-    jmethodID jmid_complete;
+    jmethodID jmid_callOnComplete;
+    jmethodID jmid_calledOnLoad;
 public:
     JavaVM *javaVM;
     JNIEnv *jniEnv;
@@ -33,6 +34,7 @@ public:
     void onGlRenderYuv(int type, int width, int height, uint8_t *y, uint8_t *u, uint8_t *v);
     void onVideoInfo(int type,int currentTime,int totalTime);
     void onComplete(int type);
+    void onLoad(int type, bool isLoaded);
     void release();
 };
 

@@ -58,6 +58,7 @@ public:
     double synchronize(AVFrame *srcFrame,double pts);
     void freeAVPacket(AVPacket *packet);
     void freeAVFrame(AVFrame *frame);
+    void setClock(int seconds);
     void release();
 };
 

@@ -13,8 +13,12 @@ import android.widget.TextView;
 import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.hong.libplayer.listener.HOnInfoListener;
+import com.hong.libplayer.listener.HOnLoadListener;
 import com.hong.libplayer.listener.HOnPreparedListener;
 import com.hong.libplayer.player.HPlayer;
+import com.hong.libplayer.player.HTimeBean;
+import com.hong.libplayer.util.HTimeUtil;
 import com.hongplayer.R;
 import com.hongplayer.base.BaseActivity;
 import com.hongplayer.bean.RadioLiveChannelBean;
@@ -66,24 +70,24 @@ public class RadioLiveActivity extends BaseActivity {
                 handler.sendMessage(message);
             }
         });
-//        player.setWlOnLoadListener(new WlOnLoadListener() {
-//            @Override
-//            public void onLoad(boolean load) {
-//                Message message = Message.obtain();
-//                message.what = 1;
-//                message.obj = load;
-//                handler.sendMessage(message);
-//            }
-//        });
-//        player.setWlOnInfoListener(new WlOnInfoListener() {
-//            @Override
-//            public void onInfo(WlTimeBean wlTimeBean) {
-//                Message message = Message.obtain();
-//                message.what = 2;
-//                message.obj = wlTimeBean;
-//                handler.sendMessage(message);
-//            }
-//        });
+        player.setOnLoadListener(new HOnLoadListener() {
+            @Override
+            public void onLoad(boolean load) {
+                Message message = Message.obtain();
+                message.what = 1;
+                message.obj = load;
+                handler.sendMessage(message);
+            }
+        });
+        player.setOnInfoListener(new HOnInfoListener() {
+            @Override
+            public void onInfo(HTimeBean timeBean) {
+                Message message = Message.obtain();
+                message.what = 2;
+                message.obj = timeBean;
+                handler.sendMessage(message);
+            }
+        });
 
 //        player.setWlOnCompleteListener(new WlOnCompleteListener() {
 //            @Override
@@ -101,7 +105,7 @@ public class RadioLiveActivity extends BaseActivity {
 //            }
 //        });
 
-        player.prepare();
+        player.prepare(true);
 
     }
 
@@ -126,15 +130,12 @@ public class RadioLiveActivity extends BaseActivity {
             }
             else if(msg.what == 2)
             {
-//                WlTimeBean wlTimeBean = (WlTimeBean) msg.obj;
-//                if(wlTimeBean.getTotal_secds() > 0)
-//                {
-//                    tvTime.setText(WlTimeUtil.secdsToDateFormat(wlTimeBean.getTotal_secds()) + "/" + WlTimeUtil.secdsToDateFormat(wlTimeBean.getCurrt_secds()));
-//                }
-//                else
-//                {
-//                    tvTime.setText(WlTimeUtil.secdsToDateFormat(wlTimeBean.getCurrt_secds()));
-//                }
+                HTimeBean timeBean = (HTimeBean) msg.obj;
+                if(timeBean.getTotalSeconds() > 0) {
+                    tvTime.setText(HTimeUtil.secdsToDateFormat(timeBean.getTotalSeconds()) + "/" + HTimeUtil.secdsToDateFormat(timeBean.getCurrentSeconds()));
+                } else {
+                    tvTime.setText(HTimeUtil.secdsToDateFormat(timeBean.getCurrentSeconds()));
+                }
             }
             else if(msg.what == 3)
             {
@@ -211,7 +212,7 @@ public class RadioLiveActivity extends BaseActivity {
                 setTitle(radioLiveChannelBean.getName());
                 Glide.with(this).load(radioLiveChannelBean.getImg()).into(squareImageView);
                 tvTime.setText("00:00:00");
-                player.prepare();
+                player.prepare(true);
             } catch (Exception e) {
                 e.printStackTrace();
             }

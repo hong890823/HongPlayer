@@ -20,6 +20,9 @@ HVideo::~HVideo() {
 void *frameInQueue(void *data){
     auto *video = (HVideo *)data;
     while(!video->status->exit){
+        if(video->status->isSeeking){
+            continue;
+        }
         video->isSoftExit = false;
         //设置frame queue的缓冲区
         if(video->queue->getFrameQueueSize()>20){
@@ -28,7 +31,16 @@ void *frameInQueue(void *data){
         //硬解情况下如果packet queue为空则等待
         if(video->codecType==1){
             if(video->queue->getPacketQueueSize()==0){
+                if(!video->status->isLoading){
+                    video->callJava->onLoad(H_THREAD_CHILD,true);
+                    video->status->isLoading = true;
+                }
                 continue;
+            }else{
+                if(video->status->isLoading){
+                    video->callJava->onLoad(H_THREAD_CHILD,false);
+                    video->status->isLoading = false;
+                }
             }
         }
         AVPacket *packet = av_packet_alloc();
@@ -65,8 +77,25 @@ void HVideo::decodeVideo() {
     ///这里释放内存不要用freeAVPacket和freeAVFrame里面的方法，会立马报错退出程序
     while(status!= nullptr && !status->exit){
         isHardExit = false;
-        if(queue->getPacketQueueSize()==0){
+        if(status->pause){
             continue;
+        }
+        if(status->isSeeking){
+            callJava->onLoad(H_THREAD_CHILD,true);
+            status->isLoading = true;
+            continue;
+        }
+        if(queue->getPacketQueueSize()==0){
+            if(!status->isLoading){
+                callJava->onLoad(H_THREAD_CHILD,true);
+                status->isLoading = true;
+            }
+            continue;
+        }else{
+            if(status->isLoading){
+                callJava->onLoad(H_THREAD_CHILD,false);
+                status->isLoading = false;
+            }
         }
         ///硬解操作的是AVPacket
         if(codecType==1){
@@ -88,8 +117,9 @@ void HVideo::decodeVideo() {
             if(audio!= nullptr)diff = audio->clock-clock;
             playCount++;
             if(playCount>500)playCount = 0;
+//            LOGE("音视频同步diff%f",diff);
             if(diff>=0.5){//如果视频比音频慢
-                if(frameRateBig){
+                if(frameRateBig){//以此来判断是不是高清
                     if(playCount%3==0 && packet->flags!=AV_PKT_FLAG_KEY){
                         av_free(packet->data);
                         av_free(packet->buf);
@@ -104,6 +134,12 @@ void HVideo::decodeVideo() {
                 }
             }
             delayTime = getDelayTime(diff);
+//            LOGE("音视频同步delayTime%f",delayTime);
+            /**
+             * 如果测试的时候，可以把同步机制去掉，指定休眠
+             * 时间进行测试，比如：
+             * 帧率是25，休眠就不要用超过25的率，比如用20可以
+             * */
             av_usleep(static_cast<unsigned int>(delayTime * 1000));
 //            LOGE("硬解视频队列中还有%d帧数据",queue->getPacketQueueSize());
             //todo 视频播放进度以及硬解码开始
@@ -112,7 +148,6 @@ void HVideo::decodeVideo() {
             av_free(packet->data);
             av_free(packet->buf);
             av_free(packet->side_data);
-            LOGE("isExit为false");
             ///软解操作的是AVFrame
         }else if(codecType==0){
             AVFrame *frame = av_frame_alloc();
@@ -232,6 +267,7 @@ double HVideo::synchronize(AVFrame *srcFrame,double pts) {
 void HVideo::playVideo(int codecType) {
     this->codecType = codecType;
     if(codecType==0){
+        LOGE("视频软解");
         pthread_create(&frameThread, nullptr,frameInQueue,this);
     }
     pthread_create(&videoThread, nullptr,decodeVideoT,this);
@@ -288,7 +324,9 @@ void HVideo::release() {
     }
 }
 
-
+void HVideo::setClock(int seconds) {
+    clock = seconds;
+}
 
 
 

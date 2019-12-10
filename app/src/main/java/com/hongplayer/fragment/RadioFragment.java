@@ -59,15 +59,15 @@ public class RadioFragment extends BaseFragment {
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-//                if(!isLoading) {
+                if(!isLoading) {
                 isLoading = true;
                 isOver = false;
                 currentPage = 1;
                 getLiveByParam(token, "3225", pageSize, currentPage);
-//                }
+                }
             }
         });
-        isLoading = true;
+        isLoading = false;
         initAdapter();
         getToken();
     }

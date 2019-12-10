@@ -67,6 +67,7 @@ public:
     void freeAVFrame(AVFrame *frame);
     void pause();
     void resume();
+    void setClock(int seconds);
     void release();
 };
 

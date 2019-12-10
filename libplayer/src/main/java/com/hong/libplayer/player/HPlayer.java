@@ -8,6 +8,8 @@ import android.view.Surface;
 
 import com.hong.libplayer.listener.HOnErrorListener;
 import com.hong.libplayer.listener.HOnGlSurfaceViewCreateListener;
+import com.hong.libplayer.listener.HOnInfoListener;
+import com.hong.libplayer.listener.HOnLoadListener;
 import com.hong.libplayer.listener.HOnPreparedListener;
 import com.hong.libplayer.listener.HCommonCode;
 import com.hong.libplayer.opengl.HGLSurfaceView;
@@ -44,9 +46,17 @@ public class HPlayer {
 
     private HOnPreparedListener onPreparedListener;
     private HOnErrorListener onErrorListener;
+    private HOnLoadListener onLoadListener;
+    private HOnInfoListener onInfoListener;
 
     private boolean isOnlyMusic;
     private boolean isOnlySoft;
+    private HTimeBean timeBean;
+    private int lastCurrTime = 0;
+
+    public int getDuration(){
+        return native_duration();
+    }
 
     public void setOnPreparedListener(HOnPreparedListener onPreparedListener) {
         this.onPreparedListener = onPreparedListener;
@@ -54,6 +64,14 @@ public class HPlayer {
 
     public void setOnErrorListener(HOnErrorListener onErrorListener) {
         this.onErrorListener = onErrorListener;
+    }
+
+    public void setOnLoadListener(HOnLoadListener onLoadListener){
+        this.onLoadListener = onLoadListener;
+    }
+
+    public void setOnInfoListener(HOnInfoListener onInfoListener){
+        this.onInfoListener = onInfoListener;
     }
 
     public void setDataSource(String dataSource){
@@ -77,9 +95,9 @@ public class HPlayer {
         });
     }
 
-    public void prepare(){
+    public void prepare(boolean isOnlyMusic){
         LogUtil.logD("Player类准备播放");
-        native_prepare(dataSource,false);
+        native_prepare(dataSource,isOnlyMusic);
     }
 
     public void start() {
@@ -87,8 +105,10 @@ public class HPlayer {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                if(timeBean==null){
+                    timeBean = new HTimeBean();
+                }
                 native_start();
-
             }
         }).start();
     }
@@ -116,17 +136,29 @@ public class HPlayer {
         }).start();
     }
 
+    public void seek(final int seconds){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                lastCurrTime = seconds;
+                native_seek(seconds);
+            }
+        }).start();
+    }
+
     /**
      * 我是分割线，分割与JNI相关的方法
      * */
-
-
 
     private native void native_prepare(String url,boolean isOnlyMusic);
 
     private native void native_start();
 
     private native void native_stop();
+
+    private native int native_duration();
+
+    private native void native_seek(int seconds);
 
     private void calledOnPrepared(){
         if(onPreparedListener!=null)onPreparedListener.onPrepared();
@@ -222,11 +254,23 @@ public class HPlayer {
     }
 
     public void onVideoInfo(int currentTime,int totalTime){
-//        LogUtil.logD("currentTime--"+currentTime+"totalTime--"+totalTime);
+        if(onInfoListener!=null && timeBean!=null){
+            if(currentTime < lastCurrTime) currentTime = lastCurrTime;
+            timeBean.setCurrentSeconds(currentTime);
+            timeBean.setTotalSeconds(totalTime);
+            onInfoListener.onInfo(timeBean);
+            lastCurrTime = currentTime;
+        }
     }
 
     public void onComplete(){
 
+    }
+
+    public void onLoad(boolean isLoading){
+        if(onLoadListener!=null){
+            onLoadListener.onLoad(isLoading);
+        }
     }
 
     private String getMimeType(int type) {

@@ -20,7 +20,8 @@ HCallJava::HCallJava(JavaVM *vm,JNIEnv *env,jobject obj) {
     jmid_video_info = jniEnv->GetMethodID(jcl,"onVideoInfo","(II)V");
     jmid_dec_mediaCodec = jniEnv->GetMethodID(jcl,"decodeMediaCodec","([BII)V");
     jmid_gl_yuv = jniEnv->GetMethodID(jcl, "setFrameData", "(II[B[B[B)V");
-    jmid_complete = jniEnv->GetMethodID(jcl,"onComplete","()V");
+    jmid_callOnComplete = jniEnv->GetMethodID(jcl,"onComplete","()V");
+    jmid_calledOnLoad = jniEnv->GetMethodID(jcl,"onLoad","(Z)V");
 }
 
 HCallJava::~HCallJava() {
@@ -168,12 +169,24 @@ void HCallJava::onComplete(int type) {
     if(H_THREAD_CHILD==type){
         JNIEnv *jniEnv;
         javaVM->AttachCurrentThread(&jniEnv,0);
-        jniEnv->CallVoidMethod(jobj,jmid_complete);
+        jniEnv->CallVoidMethod(jobj,jmid_callOnComplete);
         javaVM->DetachCurrentThread();
     }else{
-        jniEnv->CallVoidMethod(jobj,jmid_complete);
+        jniEnv->CallVoidMethod(jobj,jmid_callOnComplete);
     }
 }
+
+void HCallJava::onLoad(int type,bool isLoaded) {
+    if(H_THREAD_CHILD==type){
+        JNIEnv *jniEnv;
+        javaVM->AttachCurrentThread(&jniEnv,0);
+        jniEnv->CallVoidMethod(jobj,jmid_calledOnLoad,isLoaded);
+        javaVM->DetachCurrentThread();
+    }else{
+        jniEnv->CallVoidMethod(jobj,jmid_calledOnLoad,isLoaded);
+    }
+}
+
 
 void HCallJava::release() {
     if(javaVM!= nullptr)

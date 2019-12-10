@@ -117,11 +117,32 @@ void HAudio::initOpenSL() {
 int HAudio::getPcmData(void **out_buffer_point) {
     while(!status->exit){
         isExit = false;
+        if(status->pause){
+            av_usleep(1000 * 100);
+            continue;
+        }
+        if(status->isSeeking){
+            callJava->onLoad(H_THREAD_CHILD,true);
+            status->isLoading = true;
+            isReadPacketFinished = true;
+            continue;
+        }
         int result;
         AVPacket *packet = nullptr;
-        if(queue->getPacketQueueSize()==0){
-            av_usleep(1000*100);
-            continue;
+        if(!hasVideo){
+            if(queue->getPacketQueueSize()==0){
+                if(!status->isLoading){
+                    callJava->onLoad(H_THREAD_CHILD,true);
+                    status->isLoading = true;
+                }
+                av_usleep(1000*100);
+                continue;
+            }else{
+                if(status->isLoading){
+                    callJava->onLoad(H_THREAD_CHILD, false);
+                    status->isLoading = false;
+                }
+            }
         }
         if(isReadPacketFinished){//此时需要把一个新的packet放入到解码器中
             isReadPacketFinished = false;
@@ -330,6 +351,11 @@ void HAudio::release() {
         status = nullptr;
     }
 
+}
+
+void HAudio::setClock(int seconds) {
+    this->now_time = seconds;
+    this->clock = seconds;
 }
 
 

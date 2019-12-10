@@ -1,11 +1,15 @@
 package com.hongplayer.activity;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.ViewPager;
 import android.support.v4.view.ViewPager.PageTransformer;
@@ -57,6 +61,7 @@ public class MainActivity extends BaseActivity {
         setTitle("视频");
         initFragments();
         initTabLayoutView();
+        verifyPermissions(this);
     }
 
     private void initTabLayoutView(){
@@ -171,6 +176,19 @@ public class MainActivity extends BaseActivity {
         });
     }
 
+    @Override
+    public void onBackPressed() {
+        if(currentIndex == 2) {
+            if(localFragment != null) {
+                if(localFragment.backDir() != 0) {
+                    finish();
+                }
+            }
+        } else {
+            finish();
+        }
+    }
+
     /**
      * 判断手机是否有虚拟键盘
      * */
@@ -198,6 +216,40 @@ public class MainActivity extends BaseActivity {
         //获取NavigationBar的高度
         int height = resources.getDimensionPixelSize(resourceId);
         return height;
+    }
+
+
+    // Android 6.0 需要动态权限
+    private static final int REQUEST_PERMISSIONS_GROUP = 1;
+    private static String[] PERMISSIONS_GROUP = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.INTERNET,
+            Manifest.permission.CAMERA
+//            Manifest.permission.READ_PHONE_STATE
+    };
+    /**
+     * Android6.0以上校验文件读写权限
+     */
+    public void verifyPermissions(Activity activity) {
+        // Check if we have read or write permission
+        int writePermission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        int readPermission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.READ_EXTERNAL_STORAGE);
+        int internetPermission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.INTERNET);
+        int readPhonePermission = ActivityCompat.checkSelfPermission(activity,Manifest.permission.READ_PHONE_STATE);
+        int cameraPermission = ActivityCompat.checkSelfPermission(activity,Manifest.permission.CAMERA);
+
+        if (writePermission != PackageManager.PERMISSION_GRANTED || readPermission != PackageManager.PERMISSION_GRANTED
+                || internetPermission != PackageManager.PERMISSION_GRANTED || readPhonePermission!=PackageManager.PERMISSION_GRANTED
+                || cameraPermission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            ActivityCompat.requestPermissions(
+                    activity,
+                    PERMISSIONS_GROUP,
+                    REQUEST_PERMISSIONS_GROUP
+
+            );
+        }
     }
 
 

@@ -4,15 +4,18 @@
 
 #include "HFFmpeg.h"
 
-HFFmpeg::HFFmpeg(HCallJava *callJava,const char *url) {
+HFFmpeg::HFFmpeg(HCallJava *callJava,const char *url, bool isOnlyMusic) {
     this->callJava = callJava;
     this->url = url;
+    this->isOnlyMusic = isOnlyMusic;
     this->status = new HStatus();
     pthread_mutex_init(&initMutex,NULL);
+    pthread_mutex_init(&seekMutex, nullptr);
 }
 
 HFFmpeg::~HFFmpeg() {
     pthread_mutex_destroy(&initMutex);
+    pthread_mutex_destroy(&seekMutex);
 }
 
 void *decode(void *data){
@@ -67,6 +70,8 @@ void HFFmpeg::decodeFFmpeg() {
         callError(H_ERROR_CODE,const_cast<char *>("open input url error:%s",url));
         pthread_mutex_unlock(&initMutex);
     }
+    //总时长
+    duration = static_cast<int>(avFormatContext->duration / 1000000);
     avFormatContext->interrupt_callback.callback = avformat_interrupt_cb;
     avFormatContext->interrupt_callback.opaque = this;
     if(avformat_find_stream_info(avFormatContext,nullptr)<0){
@@ -206,8 +211,11 @@ void HFFmpeg::startPlay() {
             continue;
         }
         AVPacket *packet = av_packet_alloc();
+        //入队列和seek进度条互锁
+        pthread_mutex_lock(&seekMutex);
         ///这步很关键，得把frame的信息存到packet中再放入队列中
         int result = av_read_frame(avFormatContext,packet);
+        pthread_mutex_unlock(&seekMutex);
         if(result==0){
             //stream_index=streamIndex=循环取流中该流所处的索引位置也是channel的channelId
             if(audio!=nullptr && packet->stream_index==audio->streamIndex){
@@ -320,6 +328,10 @@ void HFFmpeg::addSPSAndPPS(AVBitStreamFilterContext *filterContext,AVPacket *pac
     }
 }
 
+int HFFmpeg::getDuration() {
+    return duration;
+}
+
 void HFFmpeg::callError(int errorCode, char *errorMsg) {
     callJava->onError(H_THREAD_CHILD, errorCode, errorMsg);
     exit = true;
@@ -362,6 +374,32 @@ void HFFmpeg::release() {
         callJava = nullptr;
     }
     pthread_mutex_unlock(&initMutex);
+}
+
+void HFFmpeg::seek(int64_t seconds) {
+    if(seconds>=duration)return;
+    //loading状态下无法seek
+    if(status->isLoading)return;
+    if(avFormatContext!= nullptr){
+        status->isSeeking = true;
+        pthread_mutex_lock(&seekMutex);
+        int64_t rel = seconds * AV_TIME_BASE;
+        avformat_seek_file(avFormatContext, -1, INT64_MIN, rel, INT64_MAX, 0);
+
+        if(audio!= nullptr){
+            audio->queue->clearPacketQueue();
+            audio->setClock(0);
+        }
+
+        if(video!= nullptr){
+            video->queue->clearFrameQueue();
+            video->queue->clearPacketQueue();
+            video->setClock(0);
+        }
+
+        status->isSeeking = false;
+        pthread_mutex_unlock(&seekMutex);
+    }
 }
 
 #pragma clang diagnostic pop

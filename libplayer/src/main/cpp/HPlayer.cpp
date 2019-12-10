@@ -13,7 +13,9 @@ Java_com_hong_libplayer_player_HPlayer_native_1prepare(JNIEnv *env, jobject inst
     jboolean *isCopy = JNI_FALSE;
     const char *url = env->GetStringUTFChars(url_,isCopy);
     callJava = new HCallJava(javaVM, env, instance);
-    hFFmpeg = new HFFmpeg(callJava,url);
+    hFFmpeg = new HFFmpeg(callJava,url,isOnlyMusic);
+    callJava->onLoad(H_THREAD_MAIN,true);
+    hFFmpeg->status->isLoading = true;
     hFFmpeg->prepareFFmpeg();
 }
 
@@ -49,4 +51,17 @@ Java_com_hong_libplayer_player_HPlayer_native_1stop(JNIEnv *env, jobject instanc
         callJava->release();
     }
 
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_hong_libplayer_player_HPlayer_native_1duration(JNIEnv *env, jobject instance) {
+    if(hFFmpeg!= nullptr)hFFmpeg->getDuration();
+    return 0;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_hong_libplayer_player_HPlayer_native_1seek(JNIEnv *env, jobject instance, jint seconds) {
+    if(hFFmpeg!= nullptr)hFFmpeg->seek(seconds);
 }

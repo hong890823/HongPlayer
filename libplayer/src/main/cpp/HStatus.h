@@ -10,8 +10,8 @@ class HStatus {
 public:
     bool exit;
     bool pause;
-    bool load;
-    bool seek;
+    bool isLoading;
+    bool isSeeking;
 public:
     HStatus();
     ~HStatus();
