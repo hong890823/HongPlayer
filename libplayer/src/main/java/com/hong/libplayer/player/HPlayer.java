@@ -253,7 +253,7 @@ public class HPlayer {
         }
     }
 
-    public void onVideoInfo(int currentTime,int totalTime){
+    public void onAvInfo(int currentTime,int totalTime){
         if(onInfoListener!=null && timeBean!=null){
             if(currentTime < lastCurrTime) currentTime = lastCurrTime;
             timeBean.setCurrentSeconds(currentTime);

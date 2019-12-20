@@ -377,6 +377,7 @@ void HFFmpeg::release() {
 }
 
 void HFFmpeg::seek(int64_t seconds) {
+
     if(seconds>=duration)return;
     //loading状态下无法seek
     if(status->isLoading)return;

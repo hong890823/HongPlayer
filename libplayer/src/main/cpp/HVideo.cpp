@@ -141,9 +141,9 @@ void HVideo::decodeVideo() {
              * 帧率是25，休眠就不要用超过25的率，比如用20可以
              * */
             av_usleep(static_cast<unsigned int>(delayTime * 1000));
-//            LOGE("硬解视频队列中还有%d帧数据",queue->getPacketQueueSize());
+            LOGE("硬解视频队列中还有%d帧数据",queue->getPacketQueueSize());
             //todo 视频播放进度以及硬解码开始
-            callJava->onVideoInfo(H_THREAD_CHILD, static_cast<int>(clock), duration);
+            callJava->onAvInfo(H_THREAD_CHILD, static_cast<int>(clock), duration);
             callJava->onDecMediaCodec(H_THREAD_CHILD,packet->size,packet->data,0);
             av_free(packet->data);
             av_free(packet->buf);
@@ -186,6 +186,7 @@ void HVideo::decodeVideo() {
             }
             av_usleep(static_cast<unsigned int>(delayTime * 1000));
             if(frame->format==AV_PIX_FMT_YUV420P){
+                callJava->onAvInfo(H_THREAD_CHILD, static_cast<int>(clock), duration);
                 callJava->onGlRenderYuv(H_THREAD_CHILD, frame->linesize[0], frame->height, frame->data[0], frame->data[1], frame->data[2]);
                   //这两种方法都可以
 //                callJava->onGlRenderYuv(H_THREAD_CHILD, avCodecContext->width, avCodecContext->height, frame->data[0], frame->data[1], frame->data[2]);
@@ -206,6 +207,7 @@ void HVideo::decodeVideo() {
                 //实际转换YUV420P
                 sws_scale(sws_ctx,frame->data,frame->linesize,0,frame->height,frameYUV420->data,frameYUV420->linesize);
                 //渲染
+                callJava->onAvInfo(H_THREAD_CHILD, static_cast<int>(clock), duration);
                 callJava->onGlRenderYuv(H_THREAD_CHILD, avCodecContext->width, avCodecContext->height, frameYUV420->data[0], frameYUV420->data[1], frameYUV420->data[2]);
             }
             freeAVFrame(frame);

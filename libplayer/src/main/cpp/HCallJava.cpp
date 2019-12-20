@@ -17,7 +17,7 @@ HCallJava::HCallJava(JavaVM *vm,JNIEnv *env,jobject obj) {
     jmid_onlySoft = jniEnv->GetMethodID(jcl, "isOnlySoft", "()Z");
     jmid_onlyMusic = jniEnv->GetMethodID(jcl,"isOnlyMusic","()Z");
     jmid_init_mdeiaCodec = jniEnv->GetMethodID(jcl,"initMediaCodec","(III[B[B)V");
-    jmid_video_info = jniEnv->GetMethodID(jcl,"onVideoInfo","(II)V");
+    jmid_av_info = jniEnv->GetMethodID(jcl,"onAvInfo","(II)V");
     jmid_dec_mediaCodec = jniEnv->GetMethodID(jcl,"decodeMediaCodec","([BII)V");
     jmid_gl_yuv = jniEnv->GetMethodID(jcl, "setFrameData", "(II[B[B[B)V");
     jmid_callOnComplete = jniEnv->GetMethodID(jcl,"onComplete","()V");
@@ -154,14 +154,14 @@ void HCallJava::onGlRenderYuv(int type, int width, int height, uint8_t *fy, uint
     }
 }
 
-void HCallJava::onVideoInfo(int type, int currentTime, int total) {
+void HCallJava::onAvInfo(int type, int currentTime, int total) {
     if(H_THREAD_CHILD==type){
         JNIEnv *jniEnv;
         javaVM->AttachCurrentThread(&jniEnv,0);
-        jniEnv->CallVoidMethod(jobj,jmid_video_info,currentTime,total);
+        jniEnv->CallVoidMethod(jobj,jmid_av_info,currentTime,total);
         javaVM->DetachCurrentThread();
     }else{
-        jniEnv->CallVoidMethod(jobj,jmid_video_info,currentTime,total);
+        jniEnv->CallVoidMethod(jobj,jmid_av_info,currentTime,total);
     }
 }
 

@@ -14,7 +14,7 @@ class HCallJava {
     jmethodID jmid_onlySoft;
     jmethodID jmid_onlyMusic;
     jmethodID jmid_init_mdeiaCodec;
-    jmethodID jmid_video_info;
+    jmethodID jmid_av_info;
     jmethodID jmid_dec_mediaCodec;
     jmethodID jmid_gl_yuv;
     jmethodID jmid_callOnComplete;
@@ -32,7 +32,7 @@ public:
     void onInitMediaCodec(int type, int mimeType, int width, int height, int csd_0_size, int csd_1_size, uint8_t *csd_0, uint8_t *csd_1);
     void onDecMediaCodec(int type,int size,uint8_t *packet_data, int pts);
     void onGlRenderYuv(int type, int width, int height, uint8_t *y, uint8_t *u, uint8_t *v);
-    void onVideoInfo(int type,int currentTime,int totalTime);
+    void onAvInfo(int type,int currentTime,int totalTime);
     void onComplete(int type);
     void onLoad(int type, bool isLoaded);
     void release();
