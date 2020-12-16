@@ -1,9 +1,5 @@
 package com.hong.libplayer.util;
 
-/**
- * Created by ywl on 2017-12-22.
- */
-
 public class HTimeUtil {
 
     public static String secdsToDateFormat(int sends) {
